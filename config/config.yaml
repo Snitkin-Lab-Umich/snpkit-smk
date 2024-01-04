@@ -1,0 +1,46 @@
+# Configuration settings for Snakemake
+samples: config/sample_IMPALA_All.tsv
+
+# Input fastq file directory path and output results directory path
+short_reads: /nfs/turbo/umms-esnitkin/Project_IMPALA/Sequence_data/fastq/processed_fastq
+
+prefix: 2023_12_14_QCD_IMPALA_All
+genome_size: 5000000
+
+ncores: 4
+
+threads: 12
+
+# Reference Genome Settings
+reference_path: resources/KPNIH1/KPNIH1.fasta
+
+# Command line parameters for rule trimmomatic_pe
+adapter_file: config/adapters/combined_Adaptors.fa
+seed_mismatches: 2
+palindrome_clipthreshold: 30
+simple_clipthreshold: 10
+minadapterlength: 8
+keep_both_reads: true
+window_size: 4
+window_size_quality: 20
+minlength: 40
+headcrop_length: 0
+
+bwa_alignment_settings: "-k 1 --non-deterministic --end-to-end --reorder --score-min L,0,0"
+
+ariba_card_db: /nfs/esnitkin/bin_group/database/ariba/CARD/CARD_db/
+ariba_mlst_db: /nfs/esnitkin/bin_group/database/ariba/MLST_db/Staphylococcus_aureus/ref_db/
+
+kraken_db: /nfs/esnitkin/bin_group/database/k2_standard_20230605/
+
+bioawk: bioawk -c fastx '{if(length($seq) > 1000) {print ">"$name; print $seq }}'
+
+prokka: -kingdom Bacteria --force --rfam
+
+amrfinder_organism: Klebsiella_pneumoniae
+
+# QC thresholds
+min_contigs: 10
+max_contigs: 500
+assembly_length: 7000000
+coverage: 20
