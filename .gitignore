@@ -6,3 +6,4 @@ config/adapters/combined_Adaptors.fa
 *.fa
 *.gz
 *.sbat
+resources/
