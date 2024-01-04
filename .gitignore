@@ -3,3 +3,6 @@ logs/
 test_data/
 .snakemake/
 config/adapters/combined_Adaptors.fa
+*.fa
+*.gz
+*.sbat
