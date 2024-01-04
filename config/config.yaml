@@ -1,10 +1,10 @@
 # Configuration settings for Snakemake
-samples: config/sample_IMPALA_All.tsv
+samples: config/sample.tsv
 
 # Input fastq file directory path and output results directory path
-short_reads: /nfs/turbo/umms-esnitkin/Project_IMPALA/Sequence_data/fastq/processed_fastq
+short_reads: /nfs/turbo/umms-esnitkin/Github/test_data/fastq
 
-prefix: 2023_12_14_QCD_IMPALA_All
+prefix: 2024_01_04_snpkit_test
 genome_size: 5000000
 
 ncores: 4
@@ -28,19 +28,3 @@ headcrop_length: 0
 
 bwa_alignment_settings: "-k 1 --non-deterministic --end-to-end --reorder --score-min L,0,0"
 
-ariba_card_db: /nfs/esnitkin/bin_group/database/ariba/CARD/CARD_db/
-ariba_mlst_db: /nfs/esnitkin/bin_group/database/ariba/MLST_db/Staphylococcus_aureus/ref_db/
-
-kraken_db: /nfs/esnitkin/bin_group/database/k2_standard_20230605/
-
-bioawk: bioawk -c fastx '{if(length($seq) > 1000) {print ">"$name; print $seq }}'
-
-prokka: -kingdom Bacteria --force --rfam
-
-amrfinder_organism: Klebsiella_pneumoniae
-
-# QC thresholds
-min_contigs: 10
-max_contigs: 500
-assembly_length: 7000000
-coverage: 20
