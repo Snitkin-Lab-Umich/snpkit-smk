@@ -1,63 +1,50 @@
 # Author Ali Pirani and Dhatri Badri
 
+configfile: "config/config.yaml"
+
 import pandas as pd
 import os
+import gzip
+import re
 
-# How to read in R1 and R2 samples?
-SAMPLES, READS = glob_wildcards('{sample}_{read_pair}_001.fastq.gz')
-READS = list(set(READS)) # set is a list that consists of unique values 
+samples_df = pd.read_csv(config["samples"])
+SAMPLE = list(samples_df['sample_id'])
 
-#samples_df = pd.read_csv(config["samples"])
-#SAMPLE = list(samples_df['sample_id'])
-#PREFIX = config["prefix"]
+PREFIX = config["prefix"]
+
 #SHORTREADS = list(samples_df['sample_id'])
+#print("Config:", config)
 
 if not os.path.exists("results/" + PREFIX):
-    os.system("mkdir %s" % "results/" + PREFIX)
+    try:
+        os.makedirs("results/" + PREFIX)
+    except OSError as e:
+        print(f"Error creating directory: {e}")
 
-# Not sure if this function works/is correct
 # downsample reads
-def downsample(R1_file, R2_file, R1_out, R2_out, genome_size):
+def downsample_reads(R1_file, R2_file, R1_out, R2_out, genome_size):
     
     R1_file = R1_file.pop()
     R2_file = R2_file.pop()
     R1_out = R1_out.pop()
     R2_out = R2_out.pop()
 
-    # QUESTION: do you still wanna use mash to estimate genome size??
-    # Run Mash to estimate Genome size
-    #mash_cmd = "mash sketch -o /tmp/sketch_out -k 32 -m 3 -r %s >& /tmp/sketch_stdout" % R1_file
-    #if genome_size:
-        #gsize = int(genome_size)   
-    #else:
-        #try:
-            #call(mash_cmd)
-        #except sp.CalledProcessError:
-            #sys.exit(1)
-
-        #with open("/tmp/sketch_stdout", 'r') as file_open:
-            #for line in file_open:
-                #if line.startswith('Estimated genome size:'):
-                    #gsize = float(line.split(': ')[1].strip())
-                #if line.startswith('Estimated coverage:'):
-                    #est_cov = float(line.split(': ')[1].strip())
-        #file_open.close()
-
     gsize = genome_size.pop()
 
     print("Using Genome Size: %s to calculate coverage" % gsize)
 
     # Extract basic fastq reads stats with seqtk
-    seqtk_check = "seqtk fqchk -q3 %s > /tmp/%s_fastqchk.txt" % (R1_file, R1_file)
+    seqtk_check = "/nfs/esnitkin/bin_group/seqtk/seqtk fqchk -q3 %s > %s_fastqchk.txt" % (R1_file, R1_file)
 
     print(seqtk_check)
+    
     try:
         os.system(seqtk_check)
     except sp.CalledProcessError: 
         print('Error running seqtk for extracting fastq statistics.')
         sys.exit(1)
 
-    with open("%s_fastqchk.txt" % R1_file, 'r') as file_open: 
+    with open("%s_fastqchk.txt" % R1_file, 'rU') as file_open: 
         for line in file_open:
             if line.startswith('min_len'):
                 line_split = line.split(';')
@@ -75,6 +62,8 @@ def downsample(R1_file, R2_file, R1_out, R2_out, genome_size):
 
     # Calculate original depth and check if it needs to be downsampled to a default coverage.
     ori_coverage_depth = int(total_bases / gsize)
+    
+    print('Original Covarage Depth: %s x' % ori_coverage_depth)
 
     #proc = sp.Popen(["nproc"], stdout=sp.PIPE, shell=True)
     #(nproc, err) = proc.communicate()
@@ -88,8 +77,8 @@ def downsample(R1_file, R2_file, R1_out, R2_out, genome_size):
 
         # Downsample using seqtk
         try:
-            print("seqtk sample %s %s | pigz --fast -c -p 2 > %s" % (R1_file, factor, r1_sub)) # what is seqtk sample path??
-            seqtk_downsample = "seqtk sample %s %s | pigz --fast -c -p 2 > %s" % (R1_file, factor, r1_sub)) # what is seqtk sample path??
+            print("/nfs/esnitkin/bin_group/seqtk/seqtk sample %s %s | pigz --fast -c -p 2 > %s" % (R1_file, factor, r1_sub)) 
+            seqtk_downsample = "/nfs/esnitkin/bin_group/seqtk/seqtk sample %s %s | pigz --fast -c -p 2 > %s" % (R1_file, factor, r1_sub) 
             os.system(seqtk_downsample)
         except sp.CalledProcessError:
             print('Error running seqtk for downsampling raw fastq reads.')
@@ -99,8 +88,8 @@ def downsample(R1_file, R2_file, R1_out, R2_out, genome_size):
             #r2_sub = "/tmp/%s" % os.path.basename(R2_file)
             r2_sub = R2_out
             try:
-                print("seqtk sample %s %s | pigz --fast -c -p 2 > %s" % (R2_file, factor, r2_sub))  # what is seqtk sample path??
-                os.system("seqtk sample %s %s | pigz --fast -c -p 2 > %s" % (R2_file, factor, r2_sub))  # what is seqtk sample path??
+                print("/nfs/esnitkin/bin_group/seqtk/seqtk sample %s %s | pigz --fast -c -p 2 > %s" % (R2_file, factor, r2_sub))  
+                os.system("/nfs/esnitkin/bin_group/seqtk/seqtk sample %s %s | pigz --fast -c -p 2 > %s" % (R2_file, factor, r2_sub))  
             except sp.CalledProcessError:
                 print('Error running seqtk for downsampling raw fastq reads.')
                 sys.exit(1)
@@ -115,9 +104,8 @@ def downsample(R1_file, R2_file, R1_out, R2_out, genome_size):
             #r2_sub = R2_file
         #else:
             #r2_sub = "None"
-    return r1_sub, r2_sub
+    #return r1_sub, r2_sub
 
-# parse bed file 
 def parse_bed_file(final_bed_unmapped_file):
     unmapped_positions_array = []
     with open(final_bed_unmapped_file, 'rU') as fp:
@@ -134,10 +122,35 @@ def parse_bed_file(final_bed_unmapped_file):
         f1.write(p_string)
     return only_unmapped_positions_file
 
+# Define a function to get all reference genome names
+#def get_all_ref_names(config):
+    #return [get_ref_name(ref_genome_path) for ref_genome_path in config["reference_genome"]]
+# Get all reference genome names
+#all_ref_names = get_all_ref_names(config)
+
+def get_ref_name(ref_genome_path):
+    file_name = os.path.basename(ref_genome_path)
+    ref_name = file_name.split('.')[0]
+    return ref_name
+
 rule all:
-    trimmed_reads=expand('trimmomatic/{sample}_{reads}_trim_paired.fastq.gz', sample=SAMPLES, reads=READS),
-
-
+    input:
+        trimmed_reads_forward=expand("results/{prefix}/{sample}/trimmomatic/{sample}_R1_trim_paired.fastq.gz", prefix=PREFIX, sample=SAMPLE),
+        trimmed_reads_reverse=expand("results/{prefix}/{sample}/trimmomatic/{sample}_R2_trim_paired.fastq.gz", prefix=PREFIX, sample=SAMPLE),
+        downsample_read_forward = expand("results/{prefix}/{sample}/downsample/{sample}_R1_trim_paired.fastq.gz", prefix=PREFIX, sample=SAMPLE),
+        downsample_read_reverse = expand("results/{prefix}/{sample}/downsample/{sample}_R2_trim_paired.fastq.gz", prefix=PREFIX, sample=SAMPLE),
+        aligned_reads = expand("results/{prefix}/{sample}/align_reads/{sample}_aln.sam", prefix=PREFIX, sample=SAMPLE),
+        clipped_sam_files = expand("results/{prefix}/{sample}/post_align/samclip/{sample}_clipped.sam", prefix=PREFIX, sample=SAMPLE),
+        aligned_bam_files = expand("results/{prefix}/{sample}/post_align/aligned_bam/{sample}_aln.bam", prefix=PREFIX, sample=SAMPLE),
+        sorted_bam_reads= expand("results/{prefix}/{sample}/post_align/sorted_bam/{sample}_aln_sort.bam", prefix=PREFIX, sample=SAMPLE),
+        bam_reads_duplicates_removed = expand("results/{prefix}/{sample}/post_align/remove_duplicates/{sample}_aln_marked.bam", prefix=PREFIX, sample=SAMPLE),
+        dups_rmvd_sorted_bam_reads = expand("results/{prefix}/{sample}/post_align/sort_bam_dups_rmvd/{sample}_aln_duplicates_removed_sort.bam", prefix=PREFIX, sample=SAMPLE),
+        alignment_stats = expand("results/{prefix}/{sample}/coverage_depth/{sample}_alignment_stats.tsv", prefix=PREFIX, sample=SAMPLE),
+        gatk_DoC = expand("results/{prefix}/{sample}/coverage_depth/{sample}_depth_of_coverage.sample_summary", prefix=PREFIX, sample=SAMPLE),
+        unmapped_bam = expand("results/{prefix}/{sample}/bedtools/bedtools_unmapped/{sample}_unmapped.bed", prefix=PREFIX, sample=SAMPLE),
+        bioawk_ref_size_file = expand("results/{prefix}/bioawk/{ref_name}.size", prefix=PREFIX, ref_name=get_ref_name(config["reference_genome"]))
+        #unmapped_bam_positions = expand("results/{prefix}/{sample}/bedtools/bedtools_unmapped/{sample}_unmapped.bed_positions", prefix=PREFIX, sample=SAMPLE)
+        
 # trims the raw fastq files to give trimmed fastq files
 rule clean:
     input:
@@ -147,7 +160,7 @@ rule clean:
         r1 = f"results/{{prefix}}/{{sample}}/trimmomatic/{{sample}}_R1_trim_paired.fastq.gz",
         r2 = f"results/{{prefix}}/{{sample}}/trimmomatic/{{sample}}_R2_trim_paired.fastq.gz", 
         r1_unpaired = f"results/{{prefix}}/{{sample}}/trimmomatic/{{sample}}_R1_trim_unpaired.fastq.gz",
-        r2_unpaired = f"results/{{prefix}}/{{sample}}/trimmomatic/{{sample}}_R2_trim_unpaired.fastq.gz",
+        r2_unpaired = f"results/{{prefix}}/{{sample}}/trimmomatic/{{sample}}_R2_trim_unpaired.fastq.gz"
     params:
         adapter_filepath=config["adaptor_filepath"],
         seed=config["seed_mismatches"],
@@ -159,10 +172,7 @@ rule clean:
         window_size_quality=config["window_size_quality"],
         minlength=config["minlength"],
         headcrop_length=config["headcrop_length"],
-        colon=config["colon"],
-        target_length=config["targetlength"],
-        crop_length=config["crop_length"]
-        #threads = config["ncores"],
+        threads = config["ncores"] # this uses bwa ncores
     log:
         trim_log = "logs/{prefix}/{sample}/trimmomatic/{sample}.log"
     conda:
@@ -174,97 +184,96 @@ rule clean:
 rule downsample:
     input:
         r1 = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/trimmomatic/" + f"{wildcards.sample}_R1_trim_paired.fastq.gz"),
-        r2 = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/trimmomatic/" + f"{wildcards.sample}_R2_trim_paired.fastq.gz"),
+        r2 = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/trimmomatic/" + f"{wildcards.sample}_R2_trim_paired.fastq.gz")
     output:
         outr1 = f"results/{{prefix}}/{{sample}}/downsample/{{sample}}_R1_trim_paired.fastq.gz",
-        outr2 = f"results/{{prefix}}/{{sample}}/downsample/{{sample}}_R2_trim_paired.fastq.gz",
+        outr2 = f"results/{{prefix}}/{{sample}}/downsample/{{sample}}_R2_trim_paired.fastq.gz"
     params:
         gsize = config["genome_size"]
-    logs:
+    log:
         downsample_log = "logs/{prefix}/{sample}/downsample/{sample}.log"
     run:
-        downsample_reads({input.r1}, {input.r2}, {output.outr1}, {output.outr2}, {params.gsize}) &>{logs.downsample_log} 
-
+        downsample_reads({input.r1}, {input.r2}, {output.outr1}, {output.outr2}, {params.gsize})
 
 # aligns trimmed fastq files using bwa to give sam file
 rule align_reads:
     input:
-        r1 = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/trimmomatic/" + f"{wildcards.sample}_R1_trim_paired.fastq.gz"),
-        r2 = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/trimmomatic/" + f"{wildcards.sample}_R2_trim_paired.fastq.gz"),
+        r1 = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/downsample/{wildcards.sample}_R1_trim_paired.fastq.gz"),
+        r2 = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/downsample/{wildcards.sample}_R2_trim_paired.fastq.gz")
     output:
         aligned_sam_out = f"results/{{prefix}}/{{sample}}/align_reads/{{sample}}_aln.sam"
     params:
-        outdir = "results/{prefix}/{sample}/align_reads",
+        #outdir = "results/{prefix}/{sample}/align_reads",
         num_cores = config["ncores"],
         ref_genome = config["reference_genome"]
-        #prefix = "{sample}",
+        #prefix = "{sample}"
     log:
         bwa_log= "logs/{prefix}/{sample}/align_reads/{sample}.log"
     conda:
         "envs/bwa.yaml"
+    #wrapper:
+        # how to call bwa prepare readgroup python file here
+    #run:
+        #read_group = prepare_readgroup({input.r1})
+        #shell("bwa mem -M -R {read_group} -t {params.num_cores} {params.ref_genome} {input.r1} {input.r2} > {output.aligned_sam_out}") 
     shell:
-        "bwa mem -M -R {input.R1} -t {params.num_cores} {params.ref_genome} {input.R1} > {output.aligned_sam_out}" # this command is not right 
-
+        """
+        split_field=$(python3 -c "from python_scripts.prepare_readgroup import prepare_readgroup; print(prepare_readgroup('{input.r1}'))") &&
+        bwa mem -M -R "$split_field" -t {params.num_cores} {params.ref_genome} {input.r1} {input.r2} > {output.aligned_sam_out}
+        """
+        
 # samclip
 rule post_align_samclip:
     input:
-        aligned_sam_out = lambda wildcards: expand(f"results/{{prefix}}/{{sample}}/post_align/{{sample}}_aln.sam")
+        aligned_sam_out = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/align_reads/{wildcards.sample}_aln.sam")
     output:
-        clipped_sam_out = f"results/{{prefix}}/{{sample}}/post_align/samclip/{{sample}}_clipped.sam"
+        clipped_sam_out = f"results/{{prefix}}/{{sample}}/post_align/samclip/{{sample}}_clipped.sam",
     conda:
-        "envs/samtools.yaml"
+        "envs/samclip.yaml"
     params:
-        outdir = "results/{prefix}/{sample}/post_align/samclip"
+        #outdir = "results/{prefix}/{sample}/post_align/sort_bam",
+        #prefix = "{sample}",
         ref_genome= config["reference_genome"]
     shell:
-        "samclip --ref {params.ref_genome} --max 10 < {input.aligned_sam_out} > {output.clipped_sam_out}"
-
-#sam to bam
-rule post_align_aln_bam:
+        "samclip --ref {params.ref_genome} --max 10 < {input.aligned_sam_out} > {output.clipped_sam_out}" 
+        
+# sam to bam, sort bam file
+rule post_align_sorted_bam:
     input:
-        clipped_sam_out = f"results/{{prefix}}/{{sample}}/post_align/samclip/{{sample}}_clipped.sam"
+        clipped_sam_out = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/samclip/{wildcards.sample}_clipped.sam")
     output:
-        bam_out = f"results/{{prefix}}/{{sample}}/post_align/aligned_bam/{{sample}}_aln.bam"
-    params:
-        outdir = "results/{prefix}/{sample}/post_align/aligned_bam"
-    conda:
-        "envs/samtools.yaml" 
-    shell:
-        "samtools view -Sb {input.clipped_sam_out} > {output.bam_out}"  
-
-# sort bam file
-rule post_align_sort_bam:
-    input:
-        bam_out = f"results/{{prefix}}/{{sample}}/post_align/aligned_bam/{{sample}}_aln.bam"
-    output:
+        bam_out = f"results/{{prefix}}/{{sample}}/post_align/aligned_bam/{{sample}}_aln.bam",
         sorted_bam_out = f"results/{{prefix}}/{{sample}}/post_align/sorted_bam/{{sample}}_aln_sort.bam"
-    params:
-        outdir = "results/{prefix}/{sample}/post_align/sort_bam",
-        #temp_outdir = "results/{prefix}/{sample}/post_align/sort_bam/{sample}_aln_sort_temp"
-        prefix = "{sample}"
     conda:
         "envs/samtools.yaml"
+    params:
+        outdir_temp = "results/{prefix}/{sample}/post_align/sorted_bam/{sample}_aln_sort_temp",
+        prefix = "{sample}",
+        ref_genome= config["reference_genome"]
     shell:
-        "samtools sort {input.bam_out} -m 500M -@ 0 -o {output.sorted_bam_out} -T {params.outdir}/{params.prefix}_aln_sort_temp" 
-
-# remove duplicates from sorted bam file
-rule post_align_rm_duplicates:
+        """
+        samtools view -Sb {input.clipped_sam_out} > {output.bam_out} &&
+        samtools sort {output.bam_out} -m 500M -@ 0 -o {output.sorted_bam_out} -T {params.outdir_temp}
+        """
+        
+# remove duplicates
+rule post_align_remove_dups:
     input:
-        sorted_bam_out = lambda wildcards: expand(f"results/{{prefix}}/{{sample}}/post_align/sorted_bam/{{sample}}_aln_sort.bam")
+        sorted_bam_out = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sorted_bam/{wildcards.sample}_aln_sort.bam")
     output:
         bam_duplicates_removed_out = f"results/{{prefix}}/{{sample}}/post_align/remove_duplicates/{{sample}}_aln_marked.bam"
     params:
         outdir = "results/{prefix}/{sample}/post_align/remove_duplicates",
-        prefix = "{sample}
+        prefix = "{sample}"
     conda:
-        "envs/picard.yaml" # is this the correct way to download picard?
+        "envs/picard.yaml"
     shell:
-        "picard MarkDuplicates REMOVE_DUPLICATES=true INPUT={input.sorted_bam_out} OUTPUT={output.bam_duplicates_removed_out} METRICS_FILE={params.outdir}/{params.prefix}_markduplicates_metrics CREATE_INDEX=true VALIDATION_STRINGENCY=LENIENT" 
-
-# sort bam files that had duplicates removed
-rule post_align_sort_removed_duplicates_bam:
+        "picard MarkDuplicates REMOVE_DUPLICATES=true INPUT={input.sorted_bam_out} OUTPUT={output.bam_duplicates_removed_out} METRICS_FILE={params.outdir}/{params.prefix}_markduplicates_metrics CREATE_INDEX=true VALIDATION_STRINGENCY=LENIENT"
+        
+# sort and index bam file with duplicates removed      
+rule post_align_sort_index_rmvd_dups:
     input:
-        bam_duplicates_removed_out = lambda wildcards: expand(f"results/{{prefix}}/{{sample}}/post_align/{{sample}}_aln_marked.bam") 
+        bam_duplicates_removed_out = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/remove_duplicates/{wildcards.sample}_aln_marked.bam")
     output:
         dups_rmvd_sorted_bam_out = f"results/{{prefix}}/{{sample}}/post_align/sort_bam_dups_rmvd/{{sample}}_aln_duplicates_removed_sort.bam"
     params:
@@ -273,76 +282,103 @@ rule post_align_sort_removed_duplicates_bam:
     conda:
         "envs/samtools.yaml"
     shell:
-        "samtools sort {input.bam_duplicates_removed_out} -m 500M -@ 0 -o {output.dups_rmvd_sorted_bam_out} -T {params.outdir}/{params.prefix}_aln_sort_temp"
-
-#index bam file
-rule post_align_index_bam:
+        """
+        samtools sort {input.bam_duplicates_removed_out} -m 500M -@ 0 -o {output.dups_rmvd_sorted_bam_out} -T {params.outdir}/{params.prefix}_aln_sort_temp &&
+        samtools index {output.dups_rmvd_sorted_bam_out}
+        """      
+        
+# determine statistics of file
+rule stats:
     input:
-        dups_rmvd_sorted_bam_out = lambda wildcards: expand(f"results/{{prefix}}/{{sample}}/post_align/{{sample}}_aln_duplicates_removed_sort.bam")
+        index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sort_bam_dups_rmvd/{wildcards.sample}_aln_duplicates_removed_sort.bam")
     output:
-        index_bam_out = f"results/{{prefix}}/{{sample}}/post_align/{{sample}}_aln_duplicates_removed_sort_index.bam" # not referencing this in shell command?
-    params:
-        outdir = "results/{prefix}/{sample}/post_align/index_bam"
+        alignment_stats = f"results/{{prefix}}/{{sample}}/coverage_depth/{{sample}}_alignment_stats.tsv" 
     conda:
         "envs/samtools.yaml"
     shell:
-        "samtools index {input.dups_rmvd_sorted_bam_out}"
+        "samtools flagstat {input.index_sorted_dups_rmvd_bam} > {output.alignment_stats}" 
 
-# determine coverage and statistics of bam file
-rule coverage_depth_stats:
+# determine coverage of bam file       
+rule coverage_depth:
     input:
-        index_bam_out = lambda wildcards: expand(f"results/{{prefix}}/{{sample}}/post_align/{{sample}}_aln_duplicates_removed_sort_index.bam")
+        index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sort_bam_dups_rmvd/{wildcards.sample}_aln_duplicates_removed_sort.bam")
     output:
-        gatk_depthCoverage_summary = f"results/{{prefix}}/{{sample}}/coverage_depth/%s/%s_depth_of_coverage.sample_summary" % (out_path, analysis_name)
-        alignment_stats = f"results/{{prefix}}/{{sample}}/coverage_depth/{{sample}}_alignment_stats" 
+        gatk_depthCoverage_summary = f"results/{{prefix}}/{{sample}}/coverage_depth/{{sample}}_depth_of_coverage.sample_summary"
     params:
         outdir = "results/{prefix}/{sample}/coverage_depth",
-        ref_genome= config["reference_genome"], # am i referencing the right ref genome here?
-        prefix = "{sample}"
+        ref_genome = config["reference_genome"], 
+        prefix = "{sample}",
+        intervals = config["bed_file"]
     conda:
-        "envs/samtools.yaml",
-        # how to download gatk? by zip or conda?
+        "envs/gatk.yaml"
+    #wrapper:
+        #"file:python_scripts/gatk"
     shell:
-        "samtools flagstat {input.index_bam_out} > {output.alignment_stats}" 
-    run:
-        interval = pattern.sub(lambda m: rep[re.escape(m.group(0))], {params.ref_genome})
-        shell("gatk DepthOfCoverage -R {params.ref_genome} -O {params.outdir}/{params.prefix}_depth_of_coverage -I {input.index_bam_out} --summary-coverage-threshold 1 --summary-coverage-threshold 5 --summary-coverage-threshold 9 --summary-coverage-threshold 10 --summary-coverage-threshold 15 --summary-coverage-threshold 20 --summary-coverage-threshold 25 --ignore-deletion-sites --intervals {interval}")
+        "gatk DepthOfCoverage -R {params.ref_genome} -O {params.outdir}/{params.prefix}_depth_of_coverage -I {input.index_sorted_dups_rmvd_bam} --summary-coverage-threshold 1 --summary-coverage-threshold 5 --summary-coverage-threshold 9 --summary-coverage-threshold 10 --summary-coverage-threshold 15 --summary-coverage-threshold 20 --summary-coverage-threshold 25 --ignore-deletion-sites --intervals {params.intervals}"
 
+# created ref genome files 
 rule bioawk:
     input:
-        ref_genome = config["reference_genome"]
+        ref_name=get_ref_name(config["reference_genome"]),
+        #ref_name = lambda wildcards: get_ref_name(config["reference_genome"]),
+        ref_genome=config["reference_genome"]
     output:
-        bio_ref_size = "results/{prefix}/bioawk/"
+        reference_size_file=f"results/{{prefix}}/ref_genome_files/{{ref_name}}.size"
     conda:
+        "envs/bioawk.yaml"
     shell:
-        "bioawk -c fastx '{ print $name, length($seq) }' <{params.ref_genome} > {params.ref_genome}.size"
+        "bioawk -c fastx '{{ print $name, length($seq) }}' < {input.ref_genome} > {output.reference_size_file}"
 
-# this function is a little bit of a mess 
-rule bedgraph_cov:
+#create bed file from biowk
+#rule created_bed_file:
+    #input:
+        # reference_size_file = output from rule bioawk
+    #output:
+        #reference_window_file = f"results/{{prefix}}/ref_genome_files/{{ref_name}}.bed"
+    #conda:
+        #"envs/bedtools.yaml"
+    #shell:
+        #"bedtools makewindows -g {reference_size_file} -w 1000 > {reference_dir}/{first_part}.bed"
+
+# bedtools
+rule bedtools:
     input:
-        index_bam_out = lambda wildcards: expand(f"results/{{prefix}}/{{sample}}/post_align/{{sample}}_aln_duplicates_removed_sort_index.bam")
+        index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sort_bam_dups_rmvd/{wildcards.sample}_aln_duplicates_removed_sort.bam")
     output:
-        ref_size_file = 
-        bed_out = f"results/{{prefix}}/{{sample}}/bedgraph_coverage/%s/%s.bed" % (reference_dir, first_part)
-        bedgraph_coverage_out = ".bedcov"
-        umapped_bed_file = f"results/{{prefix}}/{{sample}}/bedgraph_coverage/%s/%s_unmapped.bed" % (out_path, analysis)
-        unmapped_positions_file = # _positions file?
-    params:
-        ref_genome= config["reference_genome"]
+        unmapped_bed = f"results/{{prefix}}/{{sample}}/bedtools/bedtools_unmapped/{{sample}}_unmapped.bed"
     conda:
-    run:
-        #shell("bioawk -c fastx '{ print $name, length($seq) }' <{params.ref_genome} > {params.ref_genome}.size")
-        reference_SIZE_file = bioawk_make_reference_size({params.ref_genome})
-        reference_filename_base = os.path.basename(reference)
-        reference_first_part_split = reference_filename_base.split('.')
-        first_part = reference_first_part_split[0]
-        reference_dir = os.path.dirname({params.ref_genome})
-        shell("bedtools makewindows -g {reference_SIZE_file} -w 1000 > {reference_dir}/{first_part}.bed")
-        reference_windows_file = "%s/%s.bed" % (reference_dir, first_part)
-        shell("bedtools coverage -abam {index.index_bam_out} -b {reference_windows_file} > {output.bedgraph_coverage_out}")
-        shell("bedtools genomecov -ibam {input.index_bam_out} -bga | awk '$4==0' > {output.unmapped_bed_file}")
-        final_bed_unmapped_file = {output.unmapped_bed_file}
-        parse_bed_file(final_bed_unmapped_file) # what is the output from this file?
+        "envs/bedtools.yaml"
+    shell:
+        "bedtools genomecov -ibam {input.index_sorted_dups_rmvd_bam} -bga | awk '$4==0' > {output.unmapped_bed}"
 
+# this rule isnt working
+# returns unmapped positions file    
+#rule parse_bed_file:
+    #input:
+        #unmapped_bed = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/bedtools/bedtools_unmapped/{wildcards.sample}_unmapped.bed")
+    #output:
+        #unmapped_bam_positions = f"results/{{prefix}}/{{sample}}/bedtools/bedtools_unmapped/{{sample}}_unmapped.bed_positions"
+    #run:
+        #parse_bed_file({input.unmapped_bed})
+        
+# this rule is not working   
+#rule bedgraph_cov:
+    #input:
+        #index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sort_bam_dups_rmvd/{wildcards.sample}_aln_duplicates_removed_sort.bam")
+    #output:
+        #bedgraph_cov = f"results/{{prefix}}/{{sample}}/bedgraph_coverage/{{sample}}.bedcov"
+    #params:
+        #ref_genome = config["reference_genome"]
+    #conda:
+        #"envs/bedtools.yaml"
+    #wrapper:
+     
+    
+    
+    
+    
+    
+    
+    
 
 
