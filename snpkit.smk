@@ -12,6 +12,11 @@ SAMPLE = list(samples_df['sample_id'])
 
 PREFIX = config["prefix"]
 
+#get name of ref genome
+file_name = os.path.basename(config["reference_genome"])
+REF_NAME = file_name.split('.')[0]
+#print(REF_NAME)
+
 #SHORTREADS = list(samples_df['sample_id'])
 #print("Config:", config)
 
@@ -128,28 +133,23 @@ def parse_bed_file(final_bed_unmapped_file):
 # Get all reference genome names
 #all_ref_names = get_all_ref_names(config)
 
-def get_ref_name(ref_genome_path):
-    file_name = os.path.basename(ref_genome_path)
-    ref_name = file_name.split('.')[0]
-    return ref_name
 
 rule all:
     input:
-        trimmed_reads_forward=expand("results/{prefix}/{sample}/trimmomatic/{sample}_R1_trim_paired.fastq.gz", prefix=PREFIX, sample=SAMPLE),
-        trimmed_reads_reverse=expand("results/{prefix}/{sample}/trimmomatic/{sample}_R2_trim_paired.fastq.gz", prefix=PREFIX, sample=SAMPLE),
-        downsample_read_forward = expand("results/{prefix}/{sample}/downsample/{sample}_R1_trim_paired.fastq.gz", prefix=PREFIX, sample=SAMPLE),
-        downsample_read_reverse = expand("results/{prefix}/{sample}/downsample/{sample}_R2_trim_paired.fastq.gz", prefix=PREFIX, sample=SAMPLE),
-        aligned_reads = expand("results/{prefix}/{sample}/align_reads/{sample}_aln.sam", prefix=PREFIX, sample=SAMPLE),
-        clipped_sam_files = expand("results/{prefix}/{sample}/post_align/samclip/{sample}_clipped.sam", prefix=PREFIX, sample=SAMPLE),
-        aligned_bam_files = expand("results/{prefix}/{sample}/post_align/aligned_bam/{sample}_aln.bam", prefix=PREFIX, sample=SAMPLE),
-        sorted_bam_reads= expand("results/{prefix}/{sample}/post_align/sorted_bam/{sample}_aln_sort.bam", prefix=PREFIX, sample=SAMPLE),
-        bam_reads_duplicates_removed = expand("results/{prefix}/{sample}/post_align/remove_duplicates/{sample}_aln_marked.bam", prefix=PREFIX, sample=SAMPLE),
-        dups_rmvd_sorted_bam_reads = expand("results/{prefix}/{sample}/post_align/sort_bam_dups_rmvd/{sample}_aln_duplicates_removed_sort.bam", prefix=PREFIX, sample=SAMPLE),
-        alignment_stats = expand("results/{prefix}/{sample}/coverage_depth/{sample}_alignment_stats.tsv", prefix=PREFIX, sample=SAMPLE),
-        gatk_DoC = expand("results/{prefix}/{sample}/coverage_depth/{sample}_depth_of_coverage.sample_summary", prefix=PREFIX, sample=SAMPLE),
-        unmapped_bam = expand("results/{prefix}/{sample}/bedtools/bedtools_unmapped/{sample}_unmapped.bed", prefix=PREFIX, sample=SAMPLE),
-        bioawk_ref_size_file = expand("results/{prefix}/bioawk/{ref_name}.size", prefix=PREFIX, ref_name=get_ref_name(config["reference_genome"]))
-        #unmapped_bam_positions = expand("results/{prefix}/{sample}/bedtools/bedtools_unmapped/{sample}_unmapped.bed_positions", prefix=PREFIX, sample=SAMPLE)
+        trimmed_reads_forward=expand("results/{prefix}/{sample}/trimmomatic/{sample}_R1_trim_paired.fastq.gz", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
+        trimmed_reads_reverse=expand("results/{prefix}/{sample}/trimmomatic/{sample}_R2_trim_paired.fastq.gz", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
+        downsample_read_forward = expand("results/{prefix}/{sample}/downsample/{sample}_R1_trim_paired.fastq.gz", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
+        downsample_read_reverse = expand("results/{prefix}/{sample}/downsample/{sample}_R2_trim_paired.fastq.gz", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
+        aligned_reads = expand("results/{prefix}/{sample}/align_reads/{sample}_aln.sam", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
+        sorted_bam_reads= expand("results/{prefix}/{sample}/post_align/sorted_bam/{sample}_aln_sort.bam", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
+        dups_rmvd_sorted_bam_reads = expand("results/{prefix}/{sample}/post_align/sorted_bam_dups_removed/{sample}_final.bam", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
+        alignment_stats = expand("results/{prefix}/{sample}/stats/{sample}_alignment_stats.tsv", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
+        gatk_DoC = expand("results/{prefix}/{sample}/stats/{sample}_depth_of_coverage.sample_summary", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
+        unmapped_bam = expand("results/{prefix}/{sample}/bedtools/bedtools_unmapped/{sample}_unmapped.bed", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
+        bioawk_ref_size_file = expand("results/{prefix}/ref_genome_files/{ref_name}.size", prefix=PREFIX, ref_name=REF_NAME),
+        unmapped_bam_positions = expand("results/{prefix}/{sample}/bedtools/bedtools_unmapped/{sample}_unmapped.bed_positions", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
+        bed_file = expand("results/{prefix}/ref_genome_files/{ref_name}.bed", prefix=PREFIX, ref_name=REF_NAME),
+        bedgraph_coverage = expand("results/{prefix}/{sample}/bedtools/bedgraph_coverage/{sample}.bedcov", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME)
         
 # trims the raw fastq files to give trimmed fastq files
 rule clean:
@@ -211,88 +211,47 @@ rule align_reads:
         bwa_log= "logs/{prefix}/{sample}/align_reads/{sample}.log"
     conda:
         "envs/bwa.yaml"
-    #wrapper:
-        # how to call bwa prepare readgroup python file here
-    #run:
-        #read_group = prepare_readgroup({input.r1})
-        #shell("bwa mem -M -R {read_group} -t {params.num_cores} {params.ref_genome} {input.r1} {input.r2} > {output.aligned_sam_out}") 
     shell:
         """
         split_field=$(python3 -c "from python_scripts.prepare_readgroup import prepare_readgroup; print(prepare_readgroup('{input.r1}'))") &&
         bwa mem -M -R "$split_field" -t {params.num_cores} {params.ref_genome} {input.r1} {input.r2} > {output.aligned_sam_out}
         """
         
-# samclip
-rule post_align_samclip:
+# samclip and sort bam file
+rule post_align_sam_to_bam:  
     input:
         aligned_sam_out = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/align_reads/{wildcards.sample}_aln.sam")
     output:
-        clipped_sam_out = f"results/{{prefix}}/{{sample}}/post_align/samclip/{{sample}}_clipped.sam",
-    conda:
-        "envs/samclip.yaml"
-    params:
-        #outdir = "results/{prefix}/{sample}/post_align/sort_bam",
-        #prefix = "{sample}",
-        ref_genome= config["reference_genome"]
-    shell:
-        "samclip --ref {params.ref_genome} --max 10 < {input.aligned_sam_out} > {output.clipped_sam_out}" 
-        
-# sam to bam, sort bam file
-rule post_align_sorted_bam:
-    input:
-        clipped_sam_out = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/samclip/{wildcards.sample}_clipped.sam")
-    output:
-        bam_out = f"results/{{prefix}}/{{sample}}/post_align/aligned_bam/{{sample}}_aln.bam",
+        clipped_sam_out = temp(f"results/{{prefix}}/{{sample}}/post_align/samclip/{{sample}}_clipped.sam"),
+        bam_out = temp(f"results/{{prefix}}/{{sample}}/post_align/aligned_bam/{{sample}}_aln.bam"),
         sorted_bam_out = f"results/{{prefix}}/{{sample}}/post_align/sorted_bam/{{sample}}_aln_sort.bam"
-    conda:
-        "envs/samtools.yaml"
     params:
         outdir_temp = "results/{prefix}/{sample}/post_align/sorted_bam/{sample}_aln_sort_temp",
         prefix = "{sample}",
         ref_genome= config["reference_genome"]
-    shell:
-        """
-        samtools view -Sb {input.clipped_sam_out} > {output.bam_out} &&
-        samtools sort {output.bam_out} -m 500M -@ 0 -o {output.sorted_bam_out} -T {params.outdir_temp}
-        """
-        
-# remove duplicates
-rule post_align_remove_dups:
+    wrapper:
+        "file:python_scripts/sam_to_bam"
+
+# remove duplicates and sort and index bam file with duplicates removed 
+rule post_align_final_bam:
     input:
         sorted_bam_out = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sorted_bam/{wildcards.sample}_aln_sort.bam")
     output:
-        bam_duplicates_removed_out = f"results/{{prefix}}/{{sample}}/post_align/remove_duplicates/{{sample}}_aln_marked.bam"
+        bam_duplicates_removed_out = temp(f"results/{{prefix}}/{{sample}}/post_align/remove_duplicates/{{sample}}_aln_marked.bam"),
+        dups_rmvd_sorted_bam_out = f"results/{{prefix}}/{{sample}}/post_align/sorted_bam_dups_removed/{{sample}}_final.bam"
     params:
-        outdir = "results/{prefix}/{sample}/post_align/remove_duplicates",
+        outdir_dups_removed = "results/{prefix}/{sample}/post_align/remove_duplicates",
+        outdir = "results/{prefix}/{sample}/post_align/sorted_bam_dups_removed/",
         prefix = "{sample}"
-    conda:
-        "envs/picard.yaml"
-    shell:
-        "picard MarkDuplicates REMOVE_DUPLICATES=true INPUT={input.sorted_bam_out} OUTPUT={output.bam_duplicates_removed_out} METRICS_FILE={params.outdir}/{params.prefix}_markduplicates_metrics CREATE_INDEX=true VALIDATION_STRINGENCY=LENIENT"
-        
-# sort and index bam file with duplicates removed      
-rule post_align_sort_index_rmvd_dups:
-    input:
-        bam_duplicates_removed_out = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/remove_duplicates/{wildcards.sample}_aln_marked.bam")
-    output:
-        dups_rmvd_sorted_bam_out = f"results/{{prefix}}/{{sample}}/post_align/sort_bam_dups_rmvd/{{sample}}_aln_duplicates_removed_sort.bam"
-    params:
-        outdir = "results/{prefix}/{sample}/post_align/sort_bam_dups_rmvd/",
-        prefix = "{sample}"
-    conda:
-        "envs/samtools.yaml"
-    shell:
-        """
-        samtools sort {input.bam_duplicates_removed_out} -m 500M -@ 0 -o {output.dups_rmvd_sorted_bam_out} -T {params.outdir}/{params.prefix}_aln_sort_temp &&
-        samtools index {output.dups_rmvd_sorted_bam_out}
-        """      
-        
+    wrapper:
+        "file:python_scripts/final_bam"
+    
 # determine statistics of file
 rule stats:
     input:
-        index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sort_bam_dups_rmvd/{wildcards.sample}_aln_duplicates_removed_sort.bam")
+        index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sorted_bam_dups_removed/{wildcards.sample}_final.bam")
     output:
-        alignment_stats = f"results/{{prefix}}/{{sample}}/coverage_depth/{{sample}}_alignment_stats.tsv" 
+        alignment_stats = f"results/{{prefix}}/{{sample}}/stats/{{sample}}_alignment_stats.tsv" 
     conda:
         "envs/samtools.yaml"
     shell:
@@ -301,49 +260,23 @@ rule stats:
 # determine coverage of bam file       
 rule coverage_depth:
     input:
-        index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sort_bam_dups_rmvd/{wildcards.sample}_aln_duplicates_removed_sort.bam")
+        index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sorted_bam_dups_removed/{wildcards.sample}_final.bam")
     output:
-        gatk_depthCoverage_summary = f"results/{{prefix}}/{{sample}}/coverage_depth/{{sample}}_depth_of_coverage.sample_summary"
+        gatk_depthCoverage_summary = f"results/{{prefix}}/{{sample}}/stats/{{sample}}_depth_of_coverage.sample_summary"
     params:
-        outdir = "results/{prefix}/{sample}/coverage_depth",
+        outdir = "results/{prefix}/{sample}/stats",
         ref_genome = config["reference_genome"], 
         prefix = "{sample}",
-        intervals = config["bed_file"]
+        intervals = config["bed_file"] # change to output from bedfile rule
     conda:
         "envs/gatk.yaml"
-    #wrapper:
-        #"file:python_scripts/gatk"
     shell:
         "gatk DepthOfCoverage -R {params.ref_genome} -O {params.outdir}/{params.prefix}_depth_of_coverage -I {input.index_sorted_dups_rmvd_bam} --summary-coverage-threshold 1 --summary-coverage-threshold 5 --summary-coverage-threshold 9 --summary-coverage-threshold 10 --summary-coverage-threshold 15 --summary-coverage-threshold 20 --summary-coverage-threshold 25 --ignore-deletion-sites --intervals {params.intervals}"
-
-# created ref genome files 
-rule bioawk:
-    input:
-        ref_name=get_ref_name(config["reference_genome"]),
-        #ref_name = lambda wildcards: get_ref_name(config["reference_genome"]),
-        ref_genome=config["reference_genome"]
-    output:
-        reference_size_file=f"results/{{prefix}}/ref_genome_files/{{ref_name}}.size"
-    conda:
-        "envs/bioawk.yaml"
-    shell:
-        "bioawk -c fastx '{{ print $name, length($seq) }}' < {input.ref_genome} > {output.reference_size_file}"
-
-#create bed file from biowk
-#rule created_bed_file:
-    #input:
-        # reference_size_file = output from rule bioawk
-    #output:
-        #reference_window_file = f"results/{{prefix}}/ref_genome_files/{{ref_name}}.bed"
-    #conda:
-        #"envs/bedtools.yaml"
-    #shell:
-        #"bedtools makewindows -g {reference_size_file} -w 1000 > {reference_dir}/{first_part}.bed"
 
 # bedtools
 rule bedtools:
     input:
-        index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sort_bam_dups_rmvd/{wildcards.sample}_aln_duplicates_removed_sort.bam")
+        index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sorted_bam_dups_removed/{wildcards.sample}_final.bam")
     output:
         unmapped_bed = f"results/{{prefix}}/{{sample}}/bedtools/bedtools_unmapped/{{sample}}_unmapped.bed"
     conda:
@@ -351,34 +284,73 @@ rule bedtools:
     shell:
         "bedtools genomecov -ibam {input.index_sorted_dups_rmvd_bam} -bga | awk '$4==0' > {output.unmapped_bed}"
 
-# this rule isnt working
 # returns unmapped positions file    
-#rule parse_bed_file:
+rule parse_bed_file:
+    input:
+        unmapped_bed = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/bedtools/bedtools_unmapped/{wildcards.sample}_unmapped.bed")
+    output:
+        unmapped_bam_positions = f"results/{{prefix}}/{{sample}}/bedtools/bedtools_unmapped/{{sample}}_unmapped.bed_positions"
+    run:
+        parse_bed_file(input.unmapped_bed[0])
+
+# created ref genome files 
+rule bioawk:
+    output:
+        reference_size_file=f"results/{{prefix}}/ref_genome_files/{{ref_name}}.size"
+    params:
+        ref_genome = config["reference_genome"]
+    conda:
+        "envs/bioawk.yaml"
+    shell:
+        "bioawk -c fastx '{{ print $name, length($seq) }}' < {params.ref_genome} > {output.reference_size_file}"
+
+#create bed file from biowk
+rule create_bed_file:
+    input:
+        #index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sorted_bam_dups_removed/{wildcards.sample}_final.bam"),
+        reference_size_file = lambda wildcards: expand(f"results/{wildcards.prefix}/ref_genome_files/{wildcards.ref_name}.size")
+    output:
+        #bedgraph_cov = f"results/{{prefix}}/{{sample}}/bedtools/bedgraph_coverage/{{sample}}.bedcov",
+        reference_window_file = f"results/{{prefix}}/ref_genome_files/{{ref_name}}.bed"
+    conda:
+        "envs/bedtools.yaml"
+    shell:
+        #"""
+        "bedtools makewindows -g {input.reference_size_file} -w 1000 > {output.reference_window_file}" #&& 
+        #bedtools coverage -abam {input.index_sorted_dups_rmvd_bam} -b {output.reference_window_file} > {output.bedgraph_cov}
+        #"""
+
+       
+###########################
+#rule create_bed_file:
     #input:
-        #unmapped_bed = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/bedtools/bedtools_unmapped/{wildcards.sample}_unmapped.bed")
+        #index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sorted_bam_dups_removed/{wildcards.sample}_final.bam"),
+        #reference_size_file = lambda wildcards: expand(f"results/{wildcards.prefix}/ref_genome_files/{wildcards.ref_name}.size")
     #output:
-        #unmapped_bam_positions = f"results/{{prefix}}/{{sample}}/bedtools/bedtools_unmapped/{{sample}}_unmapped.bed_positions"
-    #run:
-        #parse_bed_file({input.unmapped_bed})
-        
-# this rule is not working   
-#rule bedgraph_cov:
-    #input:
-        #index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sort_bam_dups_rmvd/{wildcards.sample}_aln_duplicates_removed_sort.bam")
-    #output:
-        #bedgraph_cov = f"results/{{prefix}}/{{sample}}/bedgraph_coverage/{{sample}}.bedcov"
-    #params:
-        #ref_genome = config["reference_genome"]
+        #reference_window_file = f"results/{{prefix}}/ref_genome_files/{{ref_name}}.bed",
+        #bedgraph_cov = f"results/{{prefix}}/{{sample}}/bedtools/bedgraph_coverage/{{sample}}.bedcov"
     #conda:
         #"envs/bedtools.yaml"
-    #wrapper:
-     
-    
-    
-    
-    
-    
-    
-    
+    #shell:
+       # """
+        #bedtools makewindows -g {input.reference_size_file} -w 1000 > {output.reference_window_file} &&
+        #bedtools coverage -abam {input.index_sorted_dups_rmvd_bam} -b {output.reference_window_file} > {output.bedgraph_cov}
+        #"""
+
+# this rule is not working   
+rule bedgraph_cov:
+    input:
+        index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sorted_bam_dups_removed/{wildcards.sample}_final.bam"),
+        reference_window_file = lambda wildcards: expand(f"results/{wildcards.prefix}/ref_genome_files/{wildcards.ref_name}.bed")
+    output:
+        bedgraph_cov = "results/{prefix}/{sample}/bedtools/bedgraph_coverage/{sample}.bedcov"
+    conda:
+        "envs/bedtools.yaml"
+    shell:
+        """
+        echo "ref_name: {wildcards.ref_name}"
+        """
+
+
 
 
