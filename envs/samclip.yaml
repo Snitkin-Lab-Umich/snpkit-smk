@@ -1,0 +1,7 @@
+name: samclip
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - samclip
