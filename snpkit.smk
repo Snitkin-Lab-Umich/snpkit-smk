@@ -150,6 +150,11 @@ rule all:
         unmapped_bam_positions = expand("results/{prefix}/{sample}/bedtools/bedtools_unmapped/{sample}_unmapped.bed_positions", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
         bed_file = expand("results/{prefix}/ref_genome_files/{ref_name}.bed", prefix=PREFIX, ref_name=REF_NAME),
         bedgraph_coverage = expand("results/{prefix}/{sample}/bedtools/bedgraph_coverage/{sample}.bedcov", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME)
+        final_raw_vcf= expand("results/{prefix}}/{sample}/gatk_varcall/{sample}_aln_mpileup_raw.vcf", prefix=PREFIX, sample=SAMPLE),
+        indel_file_name = expand("results/{prefix}}/{sample}/gatk_varcall/{sample}_indel.vcf", prefix=PREFIX, sample=SAMPLE),
+        final_raw_vcf = expand("results/{prefix}}/{sample}/samtools_varcall/{sample}_aln_mpileup_raw.vcf", prefix=PREFIX, sample=SAMPLE),
+        remove_snps_5_bp_snp_indel_file = expand("results/{prefix}/{sample}/samtools_varcall/{sample}_5bp_indel_removed.vcf", prefix=PREFIX, sample=SAMPLE),
+        indel_file_name = expand("results/{prefix}/{sample}/samtools_varcall/{sample}_indel.vcf", prefix=PREFIX, sample=SAMPLE)
         
 # trims the raw fastq files to give trimmed fastq files
 rule clean:
@@ -351,6 +356,56 @@ rule bedgraph_cov:
         echo "ref_name: {wildcards.ref_name}"
         """
 
+# variant calling 
+# gatk
+# calling snp/indel and subset of variants using gatk
+rule prepare_indel_gatk:
+    input:
+        index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sorted_bam_dups_removed/{wildcards.sample}_final.bam"),
+    output:
+        final_raw_vcf= f"results/{{prefix}}/{{sample}}/gatk_varcall/{{sample}}_aln_mpileup_raw.vcf",
+        indel_file_name = f"results/{{prefix}}/{{sample}}/gatk_varcall/{{sample}}_indel.vcf"
+    params:
+        haplotype = config["haplotype_parameters"],
+        ref_genome = config["reference_genome"]
+    conda:
+        "envs/gatk.yaml"
+    shell:
+        """
+        gatk {params.haplotype} -R {params.ref_genome} -I {input.index_sorted_dups_rmvd_bam} -O {output.final_raw_vcf} --native-pair-hmm-threads 8 &&
+        gatk SelectVariants -R {params.ref_genome} -V {output.final_raw_vcf} -select-type INDEL -O {output.indel_file_name}
+        """
+
+# variant calling
+# samtools
+rule variant_calling:
+    input:
+        index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sorted_bam_dups_removed/{wildcards.sample}_final.bam"),
+    output:
+        final_raw_vcf = f"results/{{prefix}}/{{sample}}/samtools_varcall/{{sample}}_aln_mpileup_raw.vcf"
+        #final_raw_postalign_vcf = f"results/{{prefix}}/{{sample}}/samtools_varcall/{{sample}}_aln_mpileup_postalign_raw.vcf"
+    params:
+        ref_genome = config["reference_genome"], 
+        mpileup_params = config["mpileup_parameters"],
+    wrapper:
+        "file:python_scripts/variant_calling"
+
+# remove 5bp from indel (samtools?)
+rule remove_5_bp_snp_indel:
+    input:
+        final_raw_vcf = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/samtools_varcall/{wildcards.sample}_aln_mpileup_raw.vcf")
+    output:
+       remove_snps_5_bp_snp_indel_file = f"results/{{prefix}}/{{sample}}/samtools_varcall/{{sample}}_5bp_indel_removed.vcf"
+    run:
+        remove_5_bp_snp_indel({input.final_raw_vcf})
+
+rule prepare_indel:
+    input:
+        final_raw_vcf = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/samtools_varcall/{wildcards.sample}_aln_mpileup_raw.vcf")
+    output:
+        indel_file_name = f"results/{{prefix}}/{{sample}}/samtools_varcall/{{sample}}_indel.vcf"
+    run:
+        prepare_indel({input.final_raw_vcf})
 
 
 
