@@ -133,6 +133,53 @@ def parse_bed_file(final_bed_unmapped_file):
 # Get all reference genome names
 #all_ref_names = get_all_ref_names(config)
 
+def prepare_indel(raw_vcf_file):
+    #if ConfigSectionMap("pipeline", Config)['variant_caller'] == "samtools":
+    indel_file_name = raw_vcf_file + "_indel.vcf"
+    with open(raw_vcf_file, 'rU') as csv_file:
+        for line in csv_file:
+            if not line.startswith('#'):
+                line_array = line.split('\t')
+                if line_array[7].startswith('INDEL;'):
+                    indel_positions.append(int(line_array[1]))
+    f1=open(indel_file_name, 'w+')
+    with open(raw_vcf_file, 'rU') as csv_file2:
+        for line in csv_file2:
+            if not line.startswith('#'):
+                line_array = line.split('\t')
+                if int(line_array[1]) in indel_positions:
+                    print_string = line
+                    f1.write(print_string)
+            else:
+                print_string = line
+                f1.write(print_string)
+    return indel_file_name
+
+def remove_5_bp_snp_indel(raw_vcf_file):
+    remove_snps_5_bp_snp_indel_file_name = raw_vcf_file + "_5bp_indel_removed.vcf"
+    with open(raw_vcf_file, 'rU') as csv_file:
+        for line in csv_file:
+            if not line.startswith('#'):
+                line_array = line.split('\t')
+                if line_array[7].startswith('INDEL;'):
+                     indel_positions.append(line_array[1])
+        for i in indel_positions:
+            lower_range = int(i) - 5
+            upper_range = int(i) + 6
+            for positions in range(lower_range,upper_range):
+                indel_range_positions.append(positions)
+    f1=open(remove_snps_5_bp_snp_indel_file_name, 'w+')
+    with open(raw_vcf_file, 'rU') as csv_file2:
+        for line in csv_file2:
+            if not line.startswith('#'):
+                line_array = line.split('\t')
+                if int(line_array[1]) not in indel_range_positions:
+                    print_string = line
+                    f1.write(print_string)
+            else:
+                print_string = line
+                f1.write(print_string)
+    return remove_snps_5_bp_snp_indel_file_name
 
 rule all:
     input:
