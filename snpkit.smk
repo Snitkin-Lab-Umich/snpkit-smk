@@ -196,12 +196,12 @@ rule all:
         bioawk_ref_size_file = expand("results/{prefix}/ref_genome_files/{ref_name}.size", prefix=PREFIX, ref_name=REF_NAME),
         unmapped_bam_positions = expand("results/{prefix}/{sample}/bedtools/bedtools_unmapped/{sample}_unmapped.bed_positions", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
         bed_file = expand("results/{prefix}/ref_genome_files/{ref_name}.bed", prefix=PREFIX, ref_name=REF_NAME),
-        bedgraph_coverage = expand("results/{prefix}/{sample}/bedtools/bedgraph_coverage/{sample}.bedcov", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
-        final_raw_vcf= expand("results/{prefix}}/{sample}/gatk_varcall/{sample}_aln_mpileup_raw.vcf", prefix=PREFIX, sample=SAMPLE),
-        indel_file_name = expand("results/{prefix}}/{sample}/gatk_varcall/{sample}_indel.vcf", prefix=PREFIX, sample=SAMPLE),
-        final_raw_vcf = expand("results/{prefix}/{sample}/samtools_varcall/{sample}_aln_mpileup_raw.vcf", prefix=PREFIX, sample=SAMPLE),
+        #bedgraph_coverage = expand("results/{prefix}/{sample}/bedtools/bedgraph_coverage/{sample}.bedcov", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
+        final_raw_vcf_gatk= expand("results/{prefix}/{sample}/gatk_varcall/{sample}_aln_mpileup_raw.vcf", prefix=PREFIX, sample=SAMPLE),
+        indel_file_name_gatk = expand("results/{prefix}/{sample}/gatk_varcall/{sample}_indel.vcf", prefix=PREFIX, sample=SAMPLE),
+        final_raw_vcf_samtools = expand("results/{prefix}/{sample}/samtools_varcall/{sample}_aln_mpileup_raw.vcf", prefix=PREFIX, sample=SAMPLE),
         remove_snps_5_bp_snp_indel_file = expand("results/{prefix}/{sample}/samtools_varcall/{sample}_5bp_indel_removed.vcf", prefix=PREFIX, sample=SAMPLE),
-        indel_file_name = expand("results/{prefix}/{sample}/samtools_varcall/{sample}_indel.vcf", prefix=PREFIX, sample=SAMPLE)
+        indel_file_name_samtools = expand("results/{prefix}/{sample}/samtools_varcall/{sample}_indel.vcf", prefix=PREFIX, sample=SAMPLE)
         
 # trims the raw fastq files to give trimmed fastq files
 rule clean:
@@ -388,21 +388,21 @@ rule create_bed_file:
         #bedtools makewindows -g {input.reference_size_file} -w 1000 > {output.reference_window_file} &&
         #bedtools coverage -abam {input.index_sorted_dups_rmvd_bam} -b {output.reference_window_file} > {output.bedgraph_cov}
         #"""
+############################
 
 # this rule is not working   
-rule bedgraph_cov:
-    input:
-        index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sorted_bam_dups_removed/{wildcards.sample}_final.bam"),
-        reference_window_file = lambda wildcards: expand(f"results/{wildcards.prefix}/ref_genome_files/{wildcards.ref_name}.bed")
-    output:
-        bedgraph_cov = "results/{prefix}/{sample}/bedtools/bedgraph_coverage/{sample}.bedcov"
-    conda:
-        "envs/bedtools.yaml"
-    shell:
-        """
-        echo "ref_name: {wildcards.ref_name}"
-        """
-
+#rule bedgraph_cov:
+    #input:
+        #index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sorted_bam_dups_removed/{wildcards.sample}_final.bam"),
+        #reference_window_file = lambda wildcards: expand(f"results/{wildcards.prefix}/ref_genome_files/{wildcards.ref_name}.bed")
+    #output:
+        #bedgraph_cov = "results/{prefix}/{sample}/bedtools/bedgraph_coverage/{sample}.bedcov"
+    #conda:
+        #"envs/bedtools.yaml"
+    #shell:
+        #"""
+        #echo "ref_name: {wildcards.ref_name}"
+        #"""
 # variant calling 
 # gatk
 # calling snp/indel and subset of variants using gatk
@@ -453,6 +453,3 @@ rule prepare_indel:
         indel_file_name = f"results/{{prefix}}/{{sample}}/samtools_varcall/{{sample}}_indel.vcf"
     run:
         prepare_indel({input.final_raw_vcf})
-
-
-
