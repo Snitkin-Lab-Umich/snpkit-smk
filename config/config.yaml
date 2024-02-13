@@ -1,38 +1,40 @@
-# Configuration settings for snpkit
-
-# File potentially containing sample names
-samples: config/sample.tsv
+# Configuration settings for Snakemake
+samples: config/samples.tsv
 
 # Input fastq file directory path and output results directory path
-short_reads: /nfs/turbo/umms-esnitkin/Github/test_data/fastq
+input_reads: /nfs/turbo/umms-esnitkin/Github/test_data/fastq
 
-prefix: 2024_01_26_snpkit_test
-genome_size: 5000000
+prefix: 2024-01-30_snpkit-smk
+genome_size: 3000000
 
-ncores: 4
+#ncores: 4
 
-threads: 12
+#threads: 12
 
 # Reference Genome Settings
-reference_genome: resources/KPNIH1/KPNIH1.fasta
+reference_genome: /nfs/esnitkin/bin_group/variant_calling_bin/reference/KPNIH1/KPNIH1.fasta
+bed_file: /nfs/esnitkin/bin_group/variant_calling_bin/reference/KPNIH1/KPNIH1.bed
 
 # Command line parameters for rule trimmomatic_pe
-adapter_file: config/adapters/combined_Adaptors.fa
-adaptor_filepath: /home/apirani/.conda/envs/variantcalling_clone/share/trimmomatic-0.39-1/adapters/combined_Adaptors.fa # Got this path from the og snpkit config file
-seed_mismatches: 2
+adaptor_filepath: resources/trimmomatic-0.39-1/adapters/combined_Adaptors.fa
+seed_mismatches: 2 
 palindrome_clipthreshold: 30
 simple_clipthreshold: 10
 minadapterlength: 8
 keep_both_reads: true
+#sliding window
 window_size: 4
 window_size_quality: 20
+#minlength
 minlength: 40
+#headcrop
 headcrop_length: 0
-colon: :
-targetlength: 125
-crop_length: 40
 
-# bwa parameters
+#bwa
 ncores: 8
-#bwa_alignment_settings: "-k 1 --non-deterministic --end-to-end --reorder --score-min L,0,0"
 
+#samtools
+mpileup_parameters: -ug -f
+
+#gatk
+haplotype_parameters: HaplotypeCaller
