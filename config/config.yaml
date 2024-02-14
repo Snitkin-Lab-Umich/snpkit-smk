@@ -34,7 +34,13 @@ headcrop_length: 0
 ncores: 8
 
 #samtools
-mpileup_parameters: -ug -f
+#mpileup_parameters: -ug -f
 
 #gatk
 haplotype_parameters: HaplotypeCaller
+# filters
+dp: 9
+fq: 0.025
+mq: 50
+qual: 100
+af: 0.900
