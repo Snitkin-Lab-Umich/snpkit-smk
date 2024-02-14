@@ -127,34 +127,7 @@ def parse_bed_file(final_bed_unmapped_file):
         f1.write(p_string)
     return only_unmapped_positions_file
 
-# Define a function to get all reference genome names
-#def get_all_ref_names(config):
-    #return [get_ref_name(ref_genome_path) for ref_genome_path in config["reference_genome"]]
-# Get all reference genome names
-#all_ref_names = get_all_ref_names(config)
-
-def prepare_indel(raw_vcf_file):
-    #if ConfigSectionMap("pipeline", Config)['variant_caller'] == "samtools":
-    indel_file_name = raw_vcf_file + "_indel.vcf"
-    with open(raw_vcf_file, 'rU') as csv_file:
-        for line in csv_file:
-            if not line.startswith('#'):
-                line_array = line.split('\t')
-                if line_array[7].startswith('INDEL;'):
-                    indel_positions.append(int(line_array[1]))
-    f1=open(indel_file_name, 'w+')
-    with open(raw_vcf_file, 'rU') as csv_file2:
-        for line in csv_file2:
-            if not line.startswith('#'):
-                line_array = line.split('\t')
-                if int(line_array[1]) in indel_positions:
-                    print_string = line
-                    f1.write(print_string)
-            else:
-                print_string = line
-                f1.write(print_string)
-    return indel_file_name
-
+# this function is not yet ready  
 def remove_5_bp_snp_indel(raw_vcf_file):
     remove_snps_5_bp_snp_indel_file_name = raw_vcf_file + "_5bp_indel_removed.vcf"
     with open(raw_vcf_file, 'rU') as csv_file:
@@ -197,11 +170,13 @@ rule all:
         unmapped_bam_positions = expand("results/{prefix}/{sample}/bedtools/bedtools_unmapped/{sample}_unmapped.bed_positions", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
         bed_file = expand("results/{prefix}/ref_genome_files/{ref_name}.bed", prefix=PREFIX, ref_name=REF_NAME),
         #bedgraph_coverage = expand("results/{prefix}/{sample}/bedtools/bedgraph_coverage/{sample}.bedcov", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
-        final_raw_vcf_gatk= expand("results/{prefix}/{sample}/gatk_varcall/{sample}_aln_mpileup_raw.vcf", prefix=PREFIX, sample=SAMPLE),
-        indel_file_name_gatk = expand("results/{prefix}/{sample}/gatk_varcall/{sample}_indel.vcf", prefix=PREFIX, sample=SAMPLE),
-        final_raw_vcf_samtools = expand("results/{prefix}/{sample}/samtools_varcall/{sample}_aln_mpileup_raw.vcf", prefix=PREFIX, sample=SAMPLE),
-        remove_snps_5_bp_snp_indel_file = expand("results/{prefix}/{sample}/samtools_varcall/{sample}_5bp_indel_removed.vcf", prefix=PREFIX, sample=SAMPLE),
-        indel_file_name_samtools = expand("results/{prefix}/{sample}/samtools_varcall/{sample}_indel.vcf", prefix=PREFIX, sample=SAMPLE)
+        final_raw_gatk_vcf = expand("results/{prefix}/{sample}/gatk_varcall/{sample}_aln_mpileup_raw.vcf", prefix=PREFIX, sample=SAMPLE),
+        final_indel_vcf = expand("results/{prefix}/{sample}/gatk_varcall/{sample}_indel.vcf", prefix=PREFIX, sample=SAMPLE),
+        final_raw_snp_vcf = expand("results/{prefix}/{sample}/samtools_varcall/{sample}_aln_mpileup_raw.vcf", prefix=PREFIX, sample=SAMPLE),
+        filter2_snp_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}filter2_snp.vcf", prefix=PREFIX, sample=SAMPLE),
+        filter2_snp_final = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter2_snp_final.vcf", prefix=PREFIX, sample=SAMPLE),
+        filter2_indel_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}filter2_indel.vcf", prefix=PREFIX, sample=SAMPLE),
+        filter2_indel_final = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter2_indel_final.vcf", prefix=PREFIX, sample=SAMPLE),
         
 # trims the raw fastq files to give trimmed fastq files
 rule clean:
@@ -403,6 +378,7 @@ rule create_bed_file:
         #"""
         #echo "ref_name: {wildcards.ref_name}"
         #"""
+
 # variant calling 
 # gatk
 # calling snp/indel and subset of variants using gatk
@@ -423,8 +399,7 @@ rule prepare_indel_gatk:
         gatk SelectVariants -R {params.ref_genome} -V {output.final_raw_vcf} -select-type INDEL -O {output.indel_file_name}
         """
 
-# variant calling
-# samtools
+# calling snps with samtools
 rule variant_calling:
     input:
         index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sorted_bam_dups_removed/{wildcards.sample}_final.bam"),
@@ -433,23 +408,24 @@ rule variant_calling:
         #final_raw_postalign_vcf = f"results/{{prefix}}/{{sample}}/samtools_varcall/{{sample}}_aln_mpileup_postalign_raw.vcf"
     params:
         ref_genome = config["reference_genome"], 
-        mpileup_params = config["mpileup_parameters"],
+        #mpileup_params = config["mpileup_parameters"],
     wrapper:
         "file:python_scripts/variant_calling"
 
-# remove 5bp from indel (samtools?)
-rule remove_5_bp_snp_indel:
+rule hard_filter:
     input:
-        final_raw_vcf = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/samtools_varcall/{wildcards.sample}_aln_mpileup_raw.vcf")
+        final_raw_snp_vcf = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/samtools_varcall/{wildcards.sample}_aln_mpileup_raw.vcf"),
+        final_raw_indel_vcf = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/gatk_varcall/{wildcards.sample}_indel.vcf")
     output:
-       remove_snps_5_bp_snp_indel_file = f"results/{{prefix}}/{{sample}}/samtools_varcall/{{sample}}_5bp_indel_removed.vcf"
-    run:
-        remove_5_bp_snp_indel({input.final_raw_vcf})
-
-rule prepare_indel:
-    input:
-        final_raw_vcf = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/samtools_varcall/{wildcards.sample}_aln_mpileup_raw.vcf")
-    output:
-        indel_file_name = f"results/{{prefix}}/{{sample}}/samtools_varcall/{{sample}}_indel.vcf"
-    run:
-        prepare_indel({input.final_raw_vcf})
+        filter2_snp_vcf = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}filter2_snp.vcf",
+        filter2_snp_final = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}_filter2_snp_final.vcf",
+        filter2_indel_vcf = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}filter2_indel.vcf",
+        filter2_indel_final = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}_filter2_indel_final.vcf"
+    params:
+        dp_filter = config["dp"],
+        fq_filter = config["fq"],
+        mq_filter = config["mq"],
+        qual_filter = config["qual"],
+        af_filter = config["af"],
+    wrapper:
+        "file:python_scripts/hard_filter"
