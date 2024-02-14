@@ -173,10 +173,11 @@ rule all:
         final_raw_gatk_vcf = expand("results/{prefix}/{sample}/gatk_varcall/{sample}_aln_mpileup_raw.vcf", prefix=PREFIX, sample=SAMPLE),
         final_indel_vcf = expand("results/{prefix}/{sample}/gatk_varcall/{sample}_indel.vcf", prefix=PREFIX, sample=SAMPLE),
         final_raw_snp_vcf = expand("results/{prefix}/{sample}/samtools_varcall/{sample}_aln_mpileup_raw.vcf", prefix=PREFIX, sample=SAMPLE),
-        filter2_snp_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}filter2_snp.vcf", prefix=PREFIX, sample=SAMPLE),
+        filter2_snp_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter2_snp.vcf", prefix=PREFIX, sample=SAMPLE),
         filter2_snp_final = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter2_snp_final.vcf", prefix=PREFIX, sample=SAMPLE),
-        filter2_indel_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}filter2_indel.vcf", prefix=PREFIX, sample=SAMPLE),
+        filter2_indel_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter2_indel.vcf", prefix=PREFIX, sample=SAMPLE),
         filter2_indel_final = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter2_indel_final.vcf", prefix=PREFIX, sample=SAMPLE),
+        freebayes_varcall = expand("results/{prefix}/{sample}/freebayes/{sample}_aln_freebayes_raw.vcf", prefix=PREFIX, sample=SAMPLE)
         
 # trims the raw fastq files to give trimmed fastq files
 rule clean:
@@ -412,14 +413,26 @@ rule variant_calling:
     wrapper:
         "file:python_scripts/variant_calling"
 
+rule freebayes: 
+    input:
+        index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sorted_bam_dups_removed/{wildcards.sample}_final.bam"),
+    output:
+        freebayes_varcall = f"results/{{prefix}}/{{sample}}/freebayes/{{sample}}_aln_freebayes_raw.vcf"
+    params:
+        ref_genome = config["reference_genome"], 
+    conda:
+        "envs/freebayes.yaml"
+    shell:
+        "freebayes -f {params.ref_genome} {input.index_sorted_dups_rmvd_bam} > {output.freebayes_varcall}" 
+
 rule hard_filter:
     input:
         final_raw_snp_vcf = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/samtools_varcall/{wildcards.sample}_aln_mpileup_raw.vcf"),
         final_raw_indel_vcf = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/gatk_varcall/{wildcards.sample}_indel.vcf")
     output:
-        filter2_snp_vcf = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}filter2_snp.vcf",
+        filter2_snp_vcf = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}_filter2_snp.vcf",
         filter2_snp_final = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}_filter2_snp_final.vcf",
-        filter2_indel_vcf = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}filter2_indel.vcf",
+        filter2_indel_vcf = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}_filter2_indel.vcf",
         filter2_indel_final = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}_filter2_indel_final.vcf"
     params:
         dp_filter = config["dp"],
