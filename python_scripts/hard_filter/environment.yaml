@@ -1,7 +1,8 @@
-name: bioawk
 channels:
   - conda-forge
   - bioconda
   - defaults
 dependencies:
-  - bioawk
+  - picard
+  - samtools
+  

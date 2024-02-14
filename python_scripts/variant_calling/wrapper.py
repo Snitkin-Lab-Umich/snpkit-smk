@@ -14,8 +14,4 @@ mpileup_params = snakemake.params.get("mpileup_params", "")
 #log = snakemake.log_fmt_shell(stdout=True, stderr=True)
 
 # what is happening here  
-shell("samtools mpileup {mpileup_params} {ref_genome} {snakemake.input.index_sorted_dups_rmvd_bam} | bcftools call -O v -v -c -o {snakemake.output.final_raw_vcf}")
-
-# might not need to run this command
-#shell("samtools mpileup {mpileup_params} {ref_genome} {snakemake.input.index_sorted_dups_rmvd_bam} > {snakemake.output.final_raw_postalign_vcf}")
-
+shell("bcftools mpileup -f {ref_genome} {snakemake.input.index_sorted_dups_rmvd_bam} | bcftools call -Ov -v -c -o {snakemake.output.final_raw_vcf}")
