@@ -16,7 +16,7 @@ reference_genome: /nfs/esnitkin/bin_group/variant_calling_bin/reference/KPNIH1/K
 bed_file: /nfs/esnitkin/bin_group/variant_calling_bin/reference/KPNIH1/KPNIH1.bed
 
 # Command line parameters for rule trimmomatic_pe
-adaptor_filepath: resources/trimmomatic-0.39-1/adapters/combined_Adaptors.fa
+adaptor_filepath: config/adapters/combined_Adaptors.fa
 seed_mismatches: 2 
 palindrome_clipthreshold: 30
 simple_clipthreshold: 10
