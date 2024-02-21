@@ -3,6 +3,5 @@ channels:
   - bioconda
   - defaults
 dependencies:
-  - picard
-  - samtools
+  - gatk4=4.4.0.0
   
