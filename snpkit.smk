@@ -435,6 +435,7 @@ rule hard_filter:
         filter2_indel_vcf = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}_filter2_indel.vcf",
         filter2_indel_final = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}_filter2_indel_final.vcf"
     params:
+        ref_genome = config["reference_genome"],
         dp_filter = config["dp"],
         fq_filter = config["fq"],
         mq_filter = config["mq"],
