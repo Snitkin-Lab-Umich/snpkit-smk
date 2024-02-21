@@ -14,15 +14,15 @@ from snakemake.shell import shell
 #ref_genome = snakemake.params.get("ref_genome", "")
 # params
 ref_genome = snakemake.params.get("ref_genome", "")
-dp_filter = snakemake.params.get("dp", "")
-fq_filter = snakemake.params.get("fq", "")
-mq_filter = snakemake.params.get("mq", "")
-qual_filter = snakemake.params.get("qual", "")
-af_filter = snakemake.params.get("af", "")
+dp_filter = snakemake.params.get("dp_filter", "")
+fq_filter = snakemake.params.get("fq_filter", "")
+mq_filter = snakemake.params.get("mq_filter", "")
+qual_filter = snakemake.params.get("qual_filter", "")
+af_filter = snakemake.params.get("af_filter", "")
 
 #log = snakemake.log_fmt_shell(stdout=True, stderr=True)
 
-gatk_filter2_parameter_expression = "%s && %s && %s && %s && %s && %s" % (fq_filter, mq_filter, qual_filter, dp_filter, af_filter)
+gatk_filter2_parameter_expression = "%s && %s && %s && %s && %s" % (fq_filter, mq_filter, qual_filter, dp_filter, af_filter)
         
 # snp 
 shell("gatk VariantFiltration -R {ref_genome} -O {snakemake.output.filter2_snp_vcf} --variant {snakemake.input.final_raw_snp_vcf} --filter-expression \"{gatk_filter2_parameter_expression}\" --filter-name PASS_filter2")
