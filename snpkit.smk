@@ -343,42 +343,18 @@ rule create_bed_file:
     conda:
         "envs/bedtools.yaml"
     shell:
-        #"""
-        "bedtools makewindows -g {input.reference_size_file} -w 1000 > {output.reference_window_file}" #&& 
-        #bedtools coverage -abam {input.index_sorted_dups_rmvd_bam} -b {output.reference_window_file} > {output.bedgraph_cov}
-        #"""
+        "bedtools makewindows -g {input.reference_size_file} -w 1000 > {output.reference_window_file}"
 
-       
-###########################
-#rule create_bed_file:
-    #input:
-        #index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sorted_bam_dups_removed/{wildcards.sample}_final.bam"),
-        #reference_size_file = lambda wildcards: expand(f"results/{wildcards.prefix}/ref_genome_files/{wildcards.ref_name}.size")
-    #output:
-        #reference_window_file = f"results/{{prefix}}/ref_genome_files/{{ref_name}}.bed",
-        #bedgraph_cov = f"results/{{prefix}}/{{sample}}/bedtools/bedgraph_coverage/{{sample}}.bedcov"
-    #conda:
-        #"envs/bedtools.yaml"
-    #shell:
-       # """
-        #bedtools makewindows -g {input.reference_size_file} -w 1000 > {output.reference_window_file} &&
-        #bedtools coverage -abam {input.index_sorted_dups_rmvd_bam} -b {output.reference_window_file} > {output.bedgraph_cov}
-        #"""
-############################
-
-# this rule is not working   
-#rule bedgraph_cov:
-    #input:
-        #index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sorted_bam_dups_removed/{wildcards.sample}_final.bam"),
-        #reference_window_file = lambda wildcards: expand(f"results/{wildcards.prefix}/ref_genome_files/{wildcards.ref_name}.bed")
-    #output:
-        #bedgraph_cov = "results/{prefix}/{sample}/bedtools/bedgraph_coverage/{sample}.bedcov"
-    #conda:
-        #"envs/bedtools.yaml"
-    #shell:
-        #"""
-        #echo "ref_name: {wildcards.ref_name}"
-        #"""
+rule bedgraph_cov:
+    input:
+        index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sorted_bam_dups_removed/{wildcards.sample}_final.bam"),
+        reference_window_file = expand("results/{prefix}/ref_genome_files/{ref_name}.bed", prefix=PREFIX, ref_name=REF_NAME)
+    output:
+        bedgraph_cov = f"results/{{prefix}}/{{sample}}/bedtools/bedgraph_coverage/{{sample}}.bedcov"
+    conda:
+        "envs/bedtools.yaml"
+    shell:
+        "bedtools coverage -abam {input.index_sorted_dups_rmvd_bam} -b {input.reference_window_file} > {output.bedgraph_cov}"
 
 # variant calling 
 # gatk
