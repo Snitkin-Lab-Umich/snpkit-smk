@@ -127,31 +127,50 @@ def parse_bed_file(final_bed_unmapped_file):
         f1.write(p_string)
     return only_unmapped_positions_file
 
-# this function is not yet ready  
-def remove_5_bp_snp_indel(raw_vcf_file):
-    remove_snps_5_bp_snp_indel_file_name = raw_vcf_file + "_5bp_indel_removed.vcf"
-    with open(raw_vcf_file, 'rU') as csv_file:
-        for line in csv_file:
+def remove_5_bp_snp_indel(raw_snp_vcf_file, raw_indel_vcf_file, output_vcf_file):
+    remove_snps_5_bp_snp_indel_file_name = output_vcf_file
+    #raw_snp_vcf_file + "_5bp_indel_removed.vcf"
+    
+    # Extract positions of indels
+    indel_positions = set()
+    with open(raw_indel_vcf_file, 'r') as indel_file:
+        for line in indel_file:
             if not line.startswith('#'):
                 line_array = line.split('\t')
-                if line_array[7].startswith('INDEL;'):
-                     indel_positions.append(line_array[1])
-        for i in indel_positions:
-            lower_range = int(i) - 5
-            upper_range = int(i) + 6
-            for positions in range(lower_range,upper_range):
-                indel_range_positions.append(positions)
-    f1=open(remove_snps_5_bp_snp_indel_file_name, 'w+')
-    with open(raw_vcf_file, 'rU') as csv_file2:
-        for line in csv_file2:
-            if not line.startswith('#'):
-                line_array = line.split('\t')
-                if int(line_array[1]) not in indel_range_positions:
-                    print_string = line
-                    f1.write(print_string)
-            else:
-                print_string = line
-                f1.write(print_string)
+                pos = int(line_array[1])
+                indel_positions.add(pos)
+    
+    # Define range of positions to exclude
+    exclude_positions = set()
+    excluded_positions_list = []  # List to store excluded positions
+    for indel_pos in indel_positions:
+        for i in range(indel_pos - 5, indel_pos + 6):
+            exclude_positions.add(i)
+            
+    # Print indel_positions and exclude_positions for sanity checks
+    #print("Indel Positions:", indel_positions)
+    #print("Exclude Positions:", exclude_positions)
+    
+    # Write filtered SNPs to new VCF file
+    with open(remove_snps_5_bp_snp_indel_file_name, 'w') as filtered_file:
+        with open(raw_snp_vcf_file, 'r') as snp_file:
+            for line in snp_file:
+                if line.startswith('#'):
+                    filtered_file.write(line)
+                else:
+                    line_array = line.split('\t')
+                    pos = int(line_array[1])
+                    if pos in exclude_positions:
+                        excluded_positions_list.append(pos)  # Store excluded positions
+                    else:
+                        filtered_file.write(line)
+                    #if pos not in exclude_positions:
+                        #filtered_file.write(line)
+    
+    # Print excluded positions for analysis
+    #print("Excluded Positions:", excluded_positions_list)
+    #print(type(raw_indel_vcf_file))
+          
     return remove_snps_5_bp_snp_indel_file_name
 
 rule all:
@@ -173,10 +192,11 @@ rule all:
         final_raw_gatk_vcf = expand("results/{prefix}/{sample}/gatk_varcall/{sample}_aln_mpileup_raw.vcf", prefix=PREFIX, sample=SAMPLE),
         final_indel_vcf = expand("results/{prefix}/{sample}/gatk_varcall/{sample}_indel.vcf", prefix=PREFIX, sample=SAMPLE),
         final_raw_snp_vcf = expand("results/{prefix}/{sample}/samtools_varcall/{sample}_aln_mpileup_raw.vcf", prefix=PREFIX, sample=SAMPLE),
-        filter2_snp_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter2_snp.vcf", prefix=PREFIX, sample=SAMPLE),
-        filter2_snp_final = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter2_snp_final.vcf", prefix=PREFIX, sample=SAMPLE),
-        filter2_indel_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter2_indel.vcf", prefix=PREFIX, sample=SAMPLE),
-        filter2_indel_final = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter2_indel_final.vcf", prefix=PREFIX, sample=SAMPLE),
+        filter_snp_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_snp.vcf", prefix=PREFIX, sample=SAMPLE),
+        filter_snp_final = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_snp_final.vcf", prefix=PREFIX, sample=SAMPLE),
+        filter_indel_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_indel.vcf", prefix=PREFIX, sample=SAMPLE),
+        filter_indel_final = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_indel_final.vcf", prefix=PREFIX, sample=SAMPLE),
+        remove_snps_5_bp_snp_indel_file = expand("results/{prefix}/{sample}/remove_5_bp_snp_indel/{sample}_5bp_indel_removed.vcf", prefix=PREFIX, sample=SAMPLE),
         freebayes_varcall = expand("results/{prefix}/{sample}/freebayes/{sample}_aln_freebayes_raw.vcf", prefix=PREFIX, sample=SAMPLE)
         
 # trims the raw fastq files to give trimmed fastq files
@@ -409,10 +429,10 @@ rule hard_filter:
         final_raw_snp_vcf = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/samtools_varcall/{wildcards.sample}_aln_mpileup_raw.vcf"),
         final_raw_indel_vcf = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/gatk_varcall/{wildcards.sample}_indel.vcf")
     output:
-        filter2_snp_vcf = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}_filter2_snp.vcf",
-        filter2_snp_final = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}_filter2_snp_final.vcf",
-        filter2_indel_vcf = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}_filter2_indel.vcf",
-        filter2_indel_final = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}_filter2_indel_final.vcf"
+        filter_snp_vcf = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}_filter_snp.vcf",
+        filter_snp_final = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}_filter_snp_final.vcf",
+        filter_indel_vcf = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}_filter_indel.vcf",
+        filter_indel_final = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}_filter_indel_final.vcf"
     params:
         ref_genome = config["reference_genome"],
         dp_filter = config["dp"],
@@ -420,5 +440,23 @@ rule hard_filter:
         mq_filter = config["mq"],
         qual_filter = config["qual"],
         af_filter = config["af"],
-    wrapper:
-        "file:python_scripts/hard_filter"
+    conda:
+        "envs/gatk.yaml"
+    shell:
+        """
+        gatk_filter_parameter_expression=$(python3 -c "print('%s && %s && %s && %s && %s' % ('{params.fq_filter}', '{params.mq_filter}', '{params.qual_filter}', '{params.dp_filter}', '{params.af_filter}'))")
+        gatk VariantFiltration -R {params.ref_genome} -O {output.filter_snp_vcf} --variant {input.final_raw_snp_vcf} --filter-expression "$gatk_filter_parameter_expression" --filter-name PASS_filter
+        grep '#\|PASS_filter' {output.filter_snp_vcf} > {output.filter_snp_final}
+        gatk VariantFiltration -R {params.ref_genome} -O {output.filter_indel_vcf} --variant {input.final_raw_indel_vcf} --filter-expression "$gatk_filter_parameter_expression" --filter-name PASS_filter
+        grep '#\|PASS_filter' {output.filter_indel_vcf} > {output.filter_indel_final}
+        """
+
+# remove snps with 5bp of an indel 
+rule remove_5_bp_snp_indel:
+    input:
+        snp_vcf = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/filtered_vcf/{wildcards.sample}_filter_snp_final.vcf"),
+        indel_vcf = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/filtered_vcf/{wildcards.sample}_filter_indel_final.vcf")
+    output:
+        remove_snps_5_bp_snp_indel_file = f"results/{{prefix}}/{{sample}}/remove_5_bp_snp_indel/{{sample}}_5bp_indel_removed.vcf"
+    run:
+        remove_5_bp_snp_indel(input.snp_vcf[0], input.indel_vcf[0], output.remove_snps_5_bp_snp_indel_file)
