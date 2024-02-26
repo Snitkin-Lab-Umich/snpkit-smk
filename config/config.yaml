@@ -39,8 +39,8 @@ ncores: 8
 #gatk
 haplotype_parameters: HaplotypeCaller
 # filters
-dp: 9
-fq: 0.025
-mq: 50
-qual: 100
-af: 0.900
+dp: DP > 9
+fq: FQ < 0.025
+mq: MQ > 50
+qual: QUAL > 100
+af: AF1 > 0.900
