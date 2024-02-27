@@ -197,7 +197,12 @@ rule all:
         filter_indel_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_indel.vcf", prefix=PREFIX, sample=SAMPLE),
         filter_indel_final = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_indel_final.vcf", prefix=PREFIX, sample=SAMPLE),
         remove_snps_5_bp_snp_indel_file = expand("results/{prefix}/{sample}/remove_5_bp_snp_indel/{sample}_5bp_indel_removed.vcf", prefix=PREFIX, sample=SAMPLE),
-        freebayes_varcall = expand("results/{prefix}/{sample}/freebayes/{sample}_aln_freebayes_raw.vcf", prefix=PREFIX, sample=SAMPLE)
+        freebayes_varcall = expand("results/{prefix}/{sample}/freebayes/{sample}_aln_freebayes_raw.vcf", prefix=PREFIX, sample=SAMPLE),
+        csv_summary_file = expand("results/{prefix}/{sample}/annotated_files/{sample}_ANN.csv", prefix=PREFIX, sample=SAMPLE),
+        annotated_vcf = expand("results/{prefix}/{sample}/annotated_files/{sample}_ANN.vcf", prefix=PREFIX, sample=SAMPLE),
+        zipped_indel_vcf = expand("results/{prefix}/{sample}/tabix/{sample}_filter_indel_final_zipped.gz", prefix=PREFIX, sample=SAMPLE),   
+        zipped_snp_vcf = expand("results/{prefix}/{sample}/tabix/{sample}_filtered_snp_final_zipped.gz", prefix=PREFIX, sample=SAMPLE),   
+        zipped_annotated_vcf = expand("results/{prefix}/{sample}/tabix/{sample}_ANN_zipped.gz", prefix=PREFIX, sample=SAMPLE)
         
 # trims the raw fastq files to give trimmed fastq files
 rule clean:
@@ -460,3 +465,42 @@ rule remove_5_bp_snp_indel:
         remove_snps_5_bp_snp_indel_file = f"results/{{prefix}}/{{sample}}/remove_5_bp_snp_indel/{{sample}}_5bp_indel_removed.vcf"
     run:
         remove_5_bp_snp_indel(input.snp_vcf[0], input.indel_vcf[0], output.remove_snps_5_bp_snp_indel_file)
+
+rule annotate:
+    input:
+        remove_snps_5_bp_snp_indel_file = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/remove_5_bp_snp_indel/{wildcards.sample}_5bp_indel_removed.vcf"),
+        #reference_window_file = expand("results/{prefix}/ref_genome_files/{ref_name}.bed", prefix=PREFIX, ref_name=REF_NAME)
+    output:
+        csv_summary_file = f"results/{{prefix}}/{{sample}}/annotated_files/{{sample}}_ANN.csv",
+        annotated_vcf = f"results/{{prefix}}/{{sample}}/annotated_files/{{sample}}_ANN.vcf"
+    params:
+        snpeff_parameters = config["snpeff_parameters"],
+        snpEff_db = lambda wildcards: REF_NAME
+        #snpEff_config_file = "config/snpEff.config"
+    conda:
+        "snpeff_env"
+    shell:
+        "snpEff -csvStats {output.csv_summary_file} -dataDir /home/dhatrib/.conda/envs/snpeff_env/share/snpeff-5.0-1/data/ {params.snpeff_parameters} -c /home/dhatrib/.conda/envs/snpeff_env/share/snpeff-5.0-1/snpEff.config {params.snpEff_db} {input.remove_snps_5_bp_snp_indel_file} > {output.annotated_vcf}" 
+
+rule tabix_vcf:
+    input:
+        indel_vcf = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/filtered_vcf/{wildcards.sample}_filter_indel_final.vcf"),
+        remove_snps_5_bp_snp_indel_file = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/remove_5_bp_snp_indel/{wildcards.sample}_5bp_indel_removed.vcf"),
+        annotated_vcf = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/annotated_files/{wildcards.sample}_ANN.vcf")
+    output:
+        zipped_indel_vcf = f"results/{{prefix}}/{{sample}}/tabix/{{sample}}_filter_indel_final_zipped.gz",
+        zipped_snp_vcf = f"results/{{prefix}}/{{sample}}/tabix/{{sample}}_filtered_snp_final_zipped.gz", 
+        zipped_annotated_vcf = f"results/{{prefix}}/{{sample}}/tabix/{{sample}}_ANN_zipped.gz",
+    conda:
+        "envs/samtools.yaml"
+    shell:
+       """
+       bgzip -c {input.indel_vcf} > {output.zipped_indel_vcf} &&
+       tabix -p vcf -f {output.zipped_indel_vcf}
+
+       bgzip -c {input.remove_snps_5_bp_snp_indel_file} > {output.zipped_snp_vcf} &&
+       tabix -p vcf -f {output.zipped_snp_vcf}
+
+       bgzip -c {input.annotated_vcf} > {output.zipped_annotated_vcf} &&
+       tabix -p vcf -f {output.zipped_annotated_vcf}
+       """
