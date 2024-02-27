@@ -44,3 +44,6 @@ fq: FQ < 0.025
 mq: MQ > 50
 qual: QUAL > 100
 af: AF1 > 0.900
+
+#snpEff
+snpeff_parameters: -d -no-downstream -no-upstream
