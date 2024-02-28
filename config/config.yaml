@@ -42,7 +42,7 @@ haplotype_parameters: HaplotypeCaller
 dp_indel_filter: DP > 9 
 mq_indel_filter: MQ > 50.00 
 qual_indel_filter: QUAL > 2 
-af_indel_filter: AF1 > 0.900 
+af_indel_filter: AF > 0.900 
 
 #snp filters-- samtools/bcftools
 dp_snp_filter: DP > 9 
