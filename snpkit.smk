@@ -440,19 +440,24 @@ rule hard_filter:
         filter_indel_final = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}_filter_indel_final.vcf"
     params:
         ref_genome = config["reference_genome"],
-        dp_filter = config["dp"],
-        fq_filter = config["fq"],
-        mq_filter = config["mq"],
-        qual_filter = config["qual"],
-        af_filter = config["af"],
+        dp_indel_filter = config["dp_indel_filter"],
+        mq_indel_filter = config["mq_indel_filter"],
+        qual_indel_filter = config["qual_indel_filter"],
+        af_indel_filter = config["af_indel_filter"],
+        dp_snp_filter = config["dp_snp_filter"],
+        fq_snp_filter = config["fq_snp_filter"],
+        mq_snp_filter = config["mq_snp_filter"],
+        qual_snp_filter = config["qual_snp_filter"],
+        af_snp_filter = config["af_snp_filter"]
     conda:
         "envs/gatk.yaml"
     shell:
         """
-        gatk_filter_parameter_expression=$(python3 -c "print('%s && %s && %s && %s && %s' % ('{params.fq_filter}', '{params.mq_filter}', '{params.qual_filter}', '{params.dp_filter}', '{params.af_filter}'))")
-        gatk VariantFiltration -R {params.ref_genome} -O {output.filter_snp_vcf} --variant {input.final_raw_snp_vcf} --filter-expression "$gatk_filter_parameter_expression" --filter-name PASS_filter
+        gatk_snp_filter_parameter_expression=$(python3 -c "print('%s && %s && %s && %s && %s' % ('{params.dp_snp_filter}', '{params.fq_snp_filter}', '{params.mq_snp_filter}', '{params.qual_snp_filter}', '{params.af_snp_filter}'))") &&
+        gatk VariantFiltration -R {params.ref_genome} -O {output.filter_snp_vcf} --variant {input.final_raw_snp_vcf} --filter-expression "$gatk_snp_filter_parameter_expression" --filter-name PASS_filter 
         grep '#\|PASS_filter' {output.filter_snp_vcf} > {output.filter_snp_final}
-        gatk VariantFiltration -R {params.ref_genome} -O {output.filter_indel_vcf} --variant {input.final_raw_indel_vcf} --filter-expression "$gatk_filter_parameter_expression" --filter-name PASS_filter
+        gatk_indel_filter_parameter_expression=$(python3 -c "print('%s && %s && %s && %s' % ('{params.dp_indel_filter}', '{params.mq_indel_filter}', '{params.qual_indel_filter}', '{params.af_indel_filter}'))") &&
+        gatk VariantFiltration -R {params.ref_genome} -O {output.filter_indel_vcf} --variant {input.final_raw_indel_vcf} --filter-expression "$gatk_indel_filter_parameter_expression" --filter-name PASS_filter 
         grep '#\|PASS_filter' {output.filter_indel_vcf} > {output.filter_indel_final}
         """
 
