@@ -52,7 +52,7 @@ qual_snp_filter: QUAL > 100
 af_snp_filter: AF1 > 0.900
 
 #snpEff
-snpEff_path: envs/snpeff_env/share/snpeff-5.0-1/snpEff.jar
-data_dir: data/
-config_file: envs/snpeff_env/share/snpeff-5.0-1/snpEff.config
+snpEff_path: 
+data_dir: 
+snpEff_config_file: 
 snpeff_parameters: -d -no-downstream -no-upstream
