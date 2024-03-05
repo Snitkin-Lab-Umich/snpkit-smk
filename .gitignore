@@ -3,6 +3,7 @@ logs/
 test_data/
 .snakemake/
 #*.fa
+*.fa
 *.gz
 *.sbat
 resources/
