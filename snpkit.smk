@@ -198,7 +198,7 @@ rule all:
         filter_indel_final = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_indel_final.vcf", prefix=PREFIX, sample=SAMPLE),
         remove_snps_5_bp_snp_indel_file = expand("results/{prefix}/{sample}/remove_5_bp_snp_indel/{sample}_5bp_indel_removed.vcf", prefix=PREFIX, sample=SAMPLE),
         freebayes_varcall = expand("results/{prefix}/{sample}/freebayes/{sample}_aln_freebayes_raw.vcf", prefix=PREFIX, sample=SAMPLE),
-        snpeff_db = expand("envs/snpeff_env/share/snpeff-5.0-1/data/{ref_name}/snpEffectPredictor.bin", ref_name=REF_NAME),
+        snpeff_db = expand("data/{ref_name}/snpEffectPredictor.bin", ref_name=REF_NAME),
         csv_summary_file = expand("results/{prefix}/{sample}/annotated_files/{sample}_ANN.csv", prefix=PREFIX, sample=SAMPLE),
         annotated_vcf = expand("results/{prefix}/{sample}/annotated_files/{sample}_ANN.vcf", prefix=PREFIX, sample=SAMPLE),
         zipped_indel_vcf = expand("results/{prefix}/{sample}/tabix/{sample}_filter_indel_final_zipped.gz", prefix=PREFIX, sample=SAMPLE),   
@@ -473,23 +473,21 @@ rule remove_5_bp_snp_indel:
         remove_5_bp_snp_indel(input.snp_vcf[0], input.indel_vcf[0], output.remove_snps_5_bp_snp_indel_file)
 
 # create snpEff database from ref genome
-rule snpEff_db:
+rule install_snpEff:
     output:
-        snpeff_db = "envs/snpeff_env/share/snpeff-5.0-1/data/{ref_name}/snpEffectPredictor.bin"
+        snpeff_db = "data/{ref_name}/snpEffectPredictor.bin"
     params:
         snpEff_db = lambda wildcards: REF_NAME,
-        snpEff_config_file = config["config_file"],
-        data_directory = config["data_dir"],
-        snpeff_path = config["snpEff_path"]
-    shell:
-        """  
-        echo "{params.snpEff_db}.genome : {params.snpEff_db}" >> {params.snpEff_config_file}
-        java -jar {params.snpeff_path} build -genbank -v {params.snpEff_db} -c {params.snpEff_config_file} -dataDir {params.data_directory}
-        """
+        base_dir = lambda wildcards: my_basedir
+    #conda:
+        #"python_scripts/install_snpEff/environment.yaml"
+    wrapper:
+        "file:python_scripts/install_snpEff"
 
 rule annotate:
     input:
-        remove_snps_5_bp_snp_indel_file = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/remove_5_bp_snp_indel/{wildcards.sample}_5bp_indel_removed.vcf")
+        remove_snps_5_bp_snp_indel_file = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/remove_5_bp_snp_indel/{wildcards.sample}_5bp_indel_removed.vcf"),
+        snpeff_db = expand("data/{ref_name}/snpEffectPredictor.bin", ref_name=REF_NAME)
     output:
         csv_summary_file = f"results/{{prefix}}/{{sample}}/annotated_files/{{sample}}_ANN.csv",
         annotated_vcf = f"results/{{prefix}}/{{sample}}/annotated_files/{{sample}}_ANN.vcf"
@@ -498,9 +496,7 @@ rule annotate:
         snpeff_path = config["snpEff_path"],
         data_directory = config["data_dir"],
         snpEff_db = lambda wildcards: REF_NAME,
-        snpEff_config_file = config["config_file"]
-    conda:
-        "snpeff_env"
+        snpEff_config_file = config["snpEff_config_file"]
     shell:
         "java -jar {params.snpeff_path} -csvStats {output.csv_summary_file} -dataDir {params.data_directory} {params.snpeff_parameters} -c {params.snpEff_config_file} {params.snpEff_db} {input.remove_snps_5_bp_snp_indel_file} > {output.annotated_vcf}" 
 
