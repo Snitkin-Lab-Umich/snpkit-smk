@@ -21,6 +21,10 @@ conda env create -f snpkit.yaml -n snpkit
 
 ## Quick start
 
+### Create snpEff database
+
+Before you run snpkit, it is essential to establish a snpEff database tailored to your reference genome. Refer to the documentation [here](snpEff.md) for detailed instructions on creating the database. 
+
 ### Run snpkit on a set of samples.
 
 ```
