@@ -7,6 +7,7 @@ import os
 import gzip
 import re
 
+my_basedir = workflow.current_basedir
 samples_df = pd.read_csv(config["samples"])
 SAMPLE = list(samples_df['sample_id'])
 
