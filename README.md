@@ -4,6 +4,8 @@ Snakemake workflow for Microbial Variant Calling, Recombination detection and Ph
 
 ## Installation
 
+### Clone snpkit repository onto your system.
+
 > Clone the github directory onto your system.
 
 ```
@@ -18,7 +20,14 @@ Change snakemake configuration settings in config/config.yaml file and create a 
 
 Before you run snpkit, it is essential to establish a snpEff database tailored to your reference genome. Refer to the documentation [here](snpEff.md) for detailed instructions on creating the database. 
 
-> Load snakemake module from Great Lakes modules
+### Load necessary modules to run snpkit
+
+> Load bioinformatics and snakemake module from Great Lakes modules.
+
+```
+module load Bioinformatics
+```
+
 ```
 module load snakemake
 ```
