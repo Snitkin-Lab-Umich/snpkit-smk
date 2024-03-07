@@ -10,7 +10,7 @@ Snakemake workflow for Microbial Variant Calling, Recombination detection and Ph
 git clone https://github.com/Snitkin-Lab-Umich/snpkit-smk.git
 ```
 
-## Customize the config.yaml according to your samples
+### Customize the config.yaml according to your samples
 
 Change snakemake configuration settings in config/config.yaml file and create a new sample list file in config/samples.tsv. For example, if sample is called *Rush_KPC_11_R1_trim_paired.fastq.gz*, only include the sample name, i.e. **Rush_KPC_11** in samples.tsv. 
 
