@@ -279,15 +279,16 @@ rule align_reads:
         #prefix = "{sample}"
     log:
         bwa_log= "logs/{prefix}/{sample}/align_reads/{sample}.log"
-    #singularity:
-        #"docker://staphb/bwa:0.7.17"
-    conda:
-        "envs/bwa.yaml"
+    singularity:
+        "docker://staphb/bwa:0.7.17"
+    #conda:
+        #"envs/bwa.yaml"
     shell:
-        """
-        split_field=$(python3 -c "from python_scripts.prepare_readgroup import prepare_readgroup; print(prepare_readgroup('{input.r1}'))") &&
-        bwa mem -M -R "$split_field" -t {params.num_cores} {params.ref_genome} {input.r1} {input.r2} > {output.aligned_sam_out}
-        """
+        "./align_reads.sh {input.r1} {params.num_cores} {params.ref_genome} {input.r1} {input.r2} {output.aligned_sam_out}"
+        #"""
+        #split_field=$(python3 -c "from python_scripts.prepare_readgroup import prepare_readgroup; print(prepare_readgroup('{input.r1}'))") &&
+        #bwa mem -M -R "$split_field" -t {params.num_cores} {params.ref_genome} {input.r1} {input.r2} > {output.aligned_sam_out}
+        #"""
         #"""
         #mkdir -p {params.base_dir}/results/{params.prefix}/{params.sample}/align_reads/ &&
         #split_field=$(python3 -c "from python_scripts.prepare_readgroup import prepare_readgroup; print(prepare_readgroup('{params.base_dir}/{input.r1}'))") && 
@@ -564,7 +565,7 @@ rule install_annotate_snpEff:
     #shell:
         #"java -jar {params.snpeff_path} -csvStats {output.csv_summary_file} -dataDir {params.data_directory} {params.snpeff_parameters} -c {params.snpEff_config_file} {params.snpEff_db} {input.remove_snps_5_bp_snp_indel_file} > {output.annotated_vcf}" 
 
-rule tabix_vcf:
+rule remove_5_bp_snp_indel_vcf:
     input:
         #indel_vcf = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/filtered_vcf/{wildcards.sample}_filter_indel_final.vcf"),
         remove_snps_5_bp_snp_indel_file = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/filtered_vcf/{wildcards.sample}_5bp_indel_removed.vcf"),
