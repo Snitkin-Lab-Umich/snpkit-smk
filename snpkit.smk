@@ -175,37 +175,37 @@ def remove_5_bp_snp_indel(raw_snp_vcf_file, raw_indel_vcf_file, output_file):
 
 rule all:
     input:
-        trimmed_reads_forward=expand("results/{prefix}/{sample}/trimmomatic/{sample}_R1_trim_paired.fastq.gz", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
-        trimmed_reads_reverse=expand("results/{prefix}/{sample}/trimmomatic/{sample}_R2_trim_paired.fastq.gz", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
-        downsample_read_forward = expand("results/{prefix}/{sample}/downsample/{sample}_R1_trim_paired.fastq.gz", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
-        downsample_read_reverse = expand("results/{prefix}/{sample}/downsample/{sample}_R2_trim_paired.fastq.gz", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
-        aligned_reads = expand("results/{prefix}/{sample}/align_reads/{sample}_aln.sam", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
-        sorted_bam_reads= expand("results/{prefix}/{sample}/post_align/sorted_bam/{sample}_aln_sort.bam", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
+        #trimmed_reads_forward=expand("results/{prefix}/{sample}/trimmomatic/{sample}_R1_trim_paired.fastq.gz", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
+        #trimmed_reads_reverse=expand("results/{prefix}/{sample}/trimmomatic/{sample}_R2_trim_paired.fastq.gz", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
+        #downsample_read_forward = expand("results/{prefix}/{sample}/downsample/{sample}_R1_trim_paired.fastq.gz", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
+        #downsample_read_reverse = expand("results/{prefix}/{sample}/downsample/{sample}_R2_trim_paired.fastq.gz", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
+        #aligned_reads = expand("results/{prefix}/{sample}/align_reads/{sample}_aln.sam", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
+        #sorted_bam_reads= expand("results/{prefix}/{sample}/post_align/sorted_bam/{sample}_aln_sort.bam", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
         dups_rmvd_sorted_bam_reads = expand("results/{prefix}/{sample}/post_align/sorted_bam_dups_removed/{sample}_final.bam", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
-        alignment_stats = expand("results/{prefix}/{sample}/stats/{sample}_alignment_stats.tsv", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
-        gatk_DoC = expand("results/{prefix}/{sample}/stats/{sample}_depth_of_coverage.sample_summary", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
-        unmapped_bam = expand("results/{prefix}/{sample}/bedtools/bedtools_unmapped/{sample}_unmapped.bed", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
-        bioawk_ref_size_file = expand("results/{prefix}/ref_genome_files/{ref_name}.size", prefix=PREFIX, ref_name=REF_NAME),
-        unmapped_bam_positions = expand("results/{prefix}/{sample}/bedtools/bedtools_unmapped/{sample}_unmapped.bed_positions", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
-        bed_file = expand("results/{prefix}/ref_genome_files/{ref_name}.bed", prefix=PREFIX, ref_name=REF_NAME),
-        bedgraph_coverage = expand("results/{prefix}/{sample}/bedtools/bedgraph_coverage/{sample}.bedcov", prefix=PREFIX, sample=SAMPLE),
-        final_raw_gatk_vcf = expand("results/{prefix}/{sample}/gatk_varcall/{sample}_aln_mpileup_raw.vcf", prefix=PREFIX, sample=SAMPLE),
-        final_indel_vcf = expand("results/{prefix}/{sample}/gatk_varcall/{sample}_indel.vcf", prefix=PREFIX, sample=SAMPLE),
-        zipped_indel_vcf = expand("results/{prefix}/{sample}/gatk_varcall/{sample}_indel.vcf.gz", prefix=PREFIX, sample=SAMPLE),
+        #alignment_stats = expand("results/{prefix}/{sample}/stats/{sample}_alignment_stats.tsv", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
+        #gatk_DoC = expand("results/{prefix}/{sample}/stats/{sample}_depth_of_coverage.sample_summary", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
+        #unmapped_bam = expand("results/{prefix}/{sample}/bedtools/bedtools_unmapped/{sample}_unmapped.bed", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
+        #bioawk_ref_size_file = expand("results/{prefix}/ref_genome_files/{ref_name}.size", prefix=PREFIX, ref_name=REF_NAME),
+        #unmapped_bam_positions = expand("results/{prefix}/{sample}/bedtools/bedtools_unmapped/{sample}_unmapped.bed_positions", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
+        #bed_file = expand("results/{prefix}/ref_genome_files/{ref_name}.bed", prefix=PREFIX, ref_name=REF_NAME),
+        #bedgraph_coverage = expand("results/{prefix}/{sample}/bedtools/bedgraph_coverage/{sample}.bedcov", prefix=PREFIX, sample=SAMPLE),
+        #final_raw_gatk_vcf = expand("results/{prefix}/{sample}/gatk_varcall/{sample}_aln_mpileup_raw.vcf", prefix=PREFIX, sample=SAMPLE),
+        #final_indel_vcf = expand("results/{prefix}/{sample}/gatk_varcall/{sample}_indel.vcf", prefix=PREFIX, sample=SAMPLE),
+        #zipped_indel_vcf = expand("results/{prefix}/{sample}/gatk_varcall/{sample}_indel.vcf.gz", prefix=PREFIX, sample=SAMPLE),
         final_raw_snp_vcf = expand("results/{prefix}/{sample}/samtools_varcall/{sample}_aln_mpileup_raw.vcf", prefix=PREFIX, sample=SAMPLE),
         zipped_final_raw_vcf = expand("results/{prefix}/{sample}/samtools_varcall/{sample}_aln_mpileup_raw.vcf.gz", prefix=PREFIX, sample=SAMPLE),
-        filter_snp_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_snp.vcf", prefix=PREFIX, sample=SAMPLE),
-        filter_snp_final = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_snp_final.vcf", prefix=PREFIX, sample=SAMPLE),
-        filter_indel_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_indel.vcf", prefix=PREFIX, sample=SAMPLE),
-        filter_indel_final = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_indel_final.vcf", prefix=PREFIX, sample=SAMPLE),
-        zipped_filtered_snp_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_snp_final.vcf.gz", prefix=PREFIX, sample=SAMPLE),
-        zipped_filtered_indel_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_indel_final.vcf.gz", prefix=PREFIX, sample=SAMPLE),
+        #filter_snp_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_snp.vcf", prefix=PREFIX, sample=SAMPLE),
+        #filter_snp_final = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_snp_final.vcf", prefix=PREFIX, sample=SAMPLE),
+        #filter_indel_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_indel.vcf", prefix=PREFIX, sample=SAMPLE),
+        #filter_indel_final = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_indel_final.vcf", prefix=PREFIX, sample=SAMPLE),
+        #zipped_filtered_snp_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_snp_final.vcf.gz", prefix=PREFIX, sample=SAMPLE),
+        #zipped_filtered_indel_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_indel_final.vcf.gz", prefix=PREFIX, sample=SAMPLE),
         remove_snps_5_bp_snp_indel_file = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_5bp_indel_removed.vcf", prefix=PREFIX, sample=SAMPLE),
         zipped_5bp_indel_removed_snp_vcf_file = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_5bp_indel_removed.vcf.gz", prefix=PREFIX, sample=SAMPLE),
-        freebayes_varcall = expand("results/{prefix}/{sample}/freebayes/{sample}_aln_freebayes_raw.vcf", prefix=PREFIX, sample=SAMPLE),
-        csv_summary_file = expand("results/{prefix}/{sample}/annotated_files/{sample}_ANN.csv", prefix=PREFIX, sample=SAMPLE),
-        annotated_vcf = expand("results/{prefix}/{sample}/annotated_files/{sample}_ANN.vcf", prefix=PREFIX, sample=SAMPLE),
-        zipped_freebayes_varcall = expand("results/{prefix}/{sample}/freebayes/{sample}_aln_freebayes_raw.vcf.gz", prefix=PREFIX, sample=SAMPLE)
+        #freebayes_varcall = expand("results/{prefix}/{sample}/freebayes/{sample}_aln_freebayes_raw.vcf", prefix=PREFIX, sample=SAMPLE),
+        #csv_summary_file = expand("results/{prefix}/{sample}/annotated_files/{sample}_ANN.csv", prefix=PREFIX, sample=SAMPLE),
+        #annotated_vcf = expand("results/{prefix}/{sample}/annotated_files/{sample}_ANN.vcf", prefix=PREFIX, sample=SAMPLE),
+        #zipped_freebayes_varcall = expand("results/{prefix}/{sample}/freebayes/{sample}_aln_freebayes_raw.vcf.gz", prefix=PREFIX, sample=SAMPLE)
         
         #unecesssary 
         #zipped_5bp_indel_removed_snp_vcf_file = expand("results/{prefix}/{sample}/remove_5_bp_snp_indel/{sample}_5bp_indel_removed.vcf.gz", prefix=PREFIX, sample=SAMPLE),
@@ -452,18 +452,20 @@ rule bcftools_call_snps:
         index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sorted_bam_dups_removed/{wildcards.sample}_final.bam"),
     output:
         final_raw_vcf = f"results/{{prefix}}/{{sample}}/samtools_varcall/{{sample}}_aln_mpileup_raw.vcf",
-        zipped_final_raw_vcf = f"results/{{prefix}}/{{sample}}/samtools_varcall/{{sample}}_aln_mpileup_raw.vcf.gz"
+        #zipped_final_raw_vcf = f"results/{{prefix}}/{{sample}}/samtools_varcall/{{sample}}_aln_mpileup_raw.vcf.gz"
         #final_raw_postalign_vcf = f"results/{{prefix}}/{{sample}}/samtools_varcall/{{sample}}_aln_mpileup_postalign_raw.vcf"
     params:
         ref_genome = config["reference_genome"], 
         #mpileup_params = config["mpileup_parameters"],
-    #shell:
-        #"""
+    singularity:
+        "docker://staphb/bcftools:1.19"
+    shell:
+        """
+        bcftools mpileup -f {params.ref_genome} {input.index_sorted_dups_rmvd_bam} | bcftools call -Ov -v -c -o {output.final_raw_vcf}
+        """
+    #wrapper:
+        #"file:python_scripts/bcftools_call_snps"
         #module load Bioinformatics bcftools/1.12-g4b275e 
-        #bcftools mpileup -f {params.ref_genome} {input.index_sorted_dups_rmvd_bam} | bcftools call -Ov -v -c -o {output.final_raw_vcf}
-        #"""
-    wrapper:
-        "file:python_scripts/bcftools_call_snps"
 
 rule freebayes: 
     input:
@@ -569,8 +571,10 @@ rule remove_5_bp_snp_indel_vcf:
     input:
         #indel_vcf = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/filtered_vcf/{wildcards.sample}_filter_indel_final.vcf"),
         remove_snps_5_bp_snp_indel_file = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/filtered_vcf/{wildcards.sample}_5bp_indel_removed.vcf"),
+        final_raw_vcf = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/samtools_varcall/{wildcards.sample}_aln_mpileup_raw.vcf"),
         #annotated_vcf = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/annotated_files/{wildcards.sample}_ANN.vcf")
     output:
+        zipped_final_raw_vcf = f"results/{{prefix}}/{{sample}}/samtools_varcall/{{sample}}_aln_mpileup_raw.vcf.gz",
         zipped_remove_snps_5_bp_snp_indel_file = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}_5bp_indel_removed.vcf.gz"
         #zipped_indel_vcf = f"results/{{prefix}}/{{sample}}/tabix/{{sample}}_filter_indel_final_zipped.gz",
         #zipped_snp_vcf = f"results/{{prefix}}/{{sample}}/tabix/{{sample}}_filtered_snp_final_zipped.gz", 
@@ -583,4 +587,6 @@ rule remove_5_bp_snp_indel_vcf:
        """
        bgzip -c {input.remove_snps_5_bp_snp_indel_file} > {output.zipped_remove_snps_5_bp_snp_indel_file} 
        tabix -p vcf -f {output.zipped_remove_snps_5_bp_snp_indel_file}
+
+       bgzip -c {input.final_raw_vcf} > {output.zipped_final_raw_vcf} && tabix -p vcf -f {output.zipped_final_raw_vcf}
        """
