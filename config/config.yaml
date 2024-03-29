@@ -4,8 +4,8 @@ samples: config/samples.tsv
 # Input fastq file directory path and output results directory path
 input_reads: /nfs/turbo/umms-esnitkin/Github/test_data/fastq
 
-prefix: 2024-01-30_snpkit-smk
-genome_size: 3000000
+prefix: 2024-03-13_snpkit-smk
+genome_size: 5000000
 
 #ncores: 4
 
@@ -17,7 +17,7 @@ bed_file: /nfs/esnitkin/bin_group/variant_calling_bin/reference/KPNIH1/KPNIH1.be
 
 # Command line parameters for rule trimmomatic_pe
 adaptor_filepath: config/adapters/combined_Adaptors.fa
-seed_mismatches: 2 
+seed_mismatches: 2
 palindrome_clipthreshold: 30
 simple_clipthreshold: 10
 minadapterlength: 8
@@ -37,22 +37,22 @@ ncores: 8
 #mpileup_parameters: -ug -f
 
 #gatk
-haplotype_parameters: HaplotypeCaller
+#haplotype_parameters: HaplotypeCaller
 # indel -- gatk filters
-dp_indel_filter: DP > 9 
-mq_indel_filter: MQ > 50.00 
-qual_indel_filter: QUAL > 2 
-af_indel_filter: AF > 0.900 
+dp_indel_filter: DP > 9
+mq_indel_filter: MQ > 50.00
+qual_indel_filter: QUAL > 2
+af_indel_filter: AF > 0.900
 
 #snp filters-- samtools/bcftools
-dp_snp_filter: DP > 9 
+dp_snp_filter: DP > 9
 fq_snp_filter: FQ < 0.025
 mq_snp_filter: MQ > 50
 qual_snp_filter: QUAL > 100
 af_snp_filter: AF1 > 0.900
 
 #snpEff
-snpEff_path: 
-data_dir: 
-snpEff_config_file: 
+snpEff_path: ./.snakemake/conda/326bb1eff2e539dc0b12919a4a72cf75/share/snpeff-5.0-1/snpEff.jar
+data_dir: /gpfs/accounts/esnitkin_root/esnitkin1/dhatrib/snpkit-smk/data
+snpEff_config_file: ./.snakemake/conda/326bb1eff2e539dc0b12919a4a72cf75/share/snpeff-5.0-1/snpEff.config
 snpeff_parameters: -d -no-downstream -no-upstream
