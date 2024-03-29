@@ -105,7 +105,7 @@ def downsample_reads(R1_file, R2_file, R1_out, R2_out, genome_size):
         r1_sub = R1_file
         r2_sub = R2_file
         os.system("cp %s %s" % (R1_file, R1_out))
-        os.system("cp %s %s" % (R2_file, R1_out))
+        os.system("cp %s %s" % (R2_file, R2_out))
         #if args.reverse_raw:
             #r2_sub = R2_file
         #else:
@@ -175,45 +175,37 @@ def remove_5_bp_snp_indel(raw_snp_vcf_file, raw_indel_vcf_file, output_file):
 
 rule all:
     input:
-        #trimmed_reads_forward=expand("results/{prefix}/{sample}/trimmomatic/{sample}_R1_trim_paired.fastq.gz", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
-        #trimmed_reads_reverse=expand("results/{prefix}/{sample}/trimmomatic/{sample}_R2_trim_paired.fastq.gz", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
-        #downsample_read_forward = expand("results/{prefix}/{sample}/downsample/{sample}_R1_trim_paired.fastq.gz", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
-        #downsample_read_reverse = expand("results/{prefix}/{sample}/downsample/{sample}_R2_trim_paired.fastq.gz", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
-        #aligned_reads = expand("results/{prefix}/{sample}/align_reads/{sample}_aln.sam", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
-        #sorted_bam_reads= expand("results/{prefix}/{sample}/post_align/sorted_bam/{sample}_aln_sort.bam", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
+        trimmed_reads_forward=expand("results/{prefix}/{sample}/trimmomatic/{sample}_R1_trim_paired.fastq.gz", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
+        trimmed_reads_reverse=expand("results/{prefix}/{sample}/trimmomatic/{sample}_R2_trim_paired.fastq.gz", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
+        downsample_read_forward = expand("results/{prefix}/{sample}/downsample/{sample}_R1_trim_paired.fastq.gz", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
+        downsample_read_reverse = expand("results/{prefix}/{sample}/downsample/{sample}_R2_trim_paired.fastq.gz", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
+        aligned_reads = expand("results/{prefix}/{sample}/align_reads/{sample}_aln.sam", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
+        sorted_bam_reads= expand("results/{prefix}/{sample}/post_align/sorted_bam/{sample}_aln_sort.bam", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
         dups_rmvd_sorted_bam_reads = expand("results/{prefix}/{sample}/post_align/sorted_bam_dups_removed/{sample}_final.bam", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
-        #alignment_stats = expand("results/{prefix}/{sample}/stats/{sample}_alignment_stats.tsv", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
-        #gatk_DoC = expand("results/{prefix}/{sample}/stats/{sample}_depth_of_coverage.sample_summary", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
-        #unmapped_bam = expand("results/{prefix}/{sample}/bedtools/bedtools_unmapped/{sample}_unmapped.bed", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
-        #bioawk_ref_size_file = expand("results/{prefix}/ref_genome_files/{ref_name}.size", prefix=PREFIX, ref_name=REF_NAME),
-        #unmapped_bam_positions = expand("results/{prefix}/{sample}/bedtools/bedtools_unmapped/{sample}_unmapped.bed_positions", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
-        #bed_file = expand("results/{prefix}/ref_genome_files/{ref_name}.bed", prefix=PREFIX, ref_name=REF_NAME),
-        #bedgraph_coverage = expand("results/{prefix}/{sample}/bedtools/bedgraph_coverage/{sample}.bedcov", prefix=PREFIX, sample=SAMPLE),
-        #final_raw_gatk_vcf = expand("results/{prefix}/{sample}/gatk_varcall/{sample}_aln_mpileup_raw.vcf", prefix=PREFIX, sample=SAMPLE),
-        #final_indel_vcf = expand("results/{prefix}/{sample}/gatk_varcall/{sample}_indel.vcf", prefix=PREFIX, sample=SAMPLE),
-        #zipped_indel_vcf = expand("results/{prefix}/{sample}/gatk_varcall/{sample}_indel.vcf.gz", prefix=PREFIX, sample=SAMPLE),
+        alignment_stats = expand("results/{prefix}/{sample}/stats/{sample}_alignment_stats.tsv", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
+        gatk_DoC = expand("results/{prefix}/{sample}/stats/{sample}_depth_of_coverage.sample_summary", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
+        unmapped_bam = expand("results/{prefix}/{sample}/bedtools/bedtools_unmapped/{sample}_unmapped.bed", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
+        bioawk_ref_size_file = expand("results/{prefix}/ref_genome_files/{ref_name}.size", prefix=PREFIX, ref_name=REF_NAME),
+        unmapped_bam_positions = expand("results/{prefix}/{sample}/bedtools/bedtools_unmapped/{sample}_unmapped.bed_positions", prefix=PREFIX, sample=SAMPLE, ref_name=REF_NAME),
+        bed_file = expand("results/{prefix}/ref_genome_files/{ref_name}.bed", prefix=PREFIX, ref_name=REF_NAME),
+        bedgraph_coverage = expand("results/{prefix}/{sample}/bedtools/bedgraph_coverage/{sample}.bedcov", prefix=PREFIX, sample=SAMPLE),
+        final_raw_gatk_vcf = expand("results/{prefix}/{sample}/gatk_varcall/{sample}_aln_mpileup_raw.vcf", prefix=PREFIX, sample=SAMPLE),
+        final_indel_vcf = expand("results/{prefix}/{sample}/gatk_varcall/{sample}_indel.vcf", prefix=PREFIX, sample=SAMPLE),
+        zipped_indel_vcf = expand("results/{prefix}/{sample}/gatk_varcall/{sample}_indel.vcf.gz", prefix=PREFIX, sample=SAMPLE),
         final_raw_snp_vcf = expand("results/{prefix}/{sample}/samtools_varcall/{sample}_aln_mpileup_raw.vcf", prefix=PREFIX, sample=SAMPLE),
         zipped_final_raw_vcf = expand("results/{prefix}/{sample}/samtools_varcall/{sample}_aln_mpileup_raw.vcf.gz", prefix=PREFIX, sample=SAMPLE),
-        #filter_snp_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_snp.vcf", prefix=PREFIX, sample=SAMPLE),
-        #filter_snp_final = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_snp_final.vcf", prefix=PREFIX, sample=SAMPLE),
-        #filter_indel_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_indel.vcf", prefix=PREFIX, sample=SAMPLE),
-        #filter_indel_final = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_indel_final.vcf", prefix=PREFIX, sample=SAMPLE),
-        #zipped_filtered_snp_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_snp_final.vcf.gz", prefix=PREFIX, sample=SAMPLE),
-        #zipped_filtered_indel_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_indel_final.vcf.gz", prefix=PREFIX, sample=SAMPLE),
+        filter_snp_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_snp.vcf", prefix=PREFIX, sample=SAMPLE),
+        filter_snp_final = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_snp_final.vcf", prefix=PREFIX, sample=SAMPLE),
+        filter_indel_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_indel.vcf", prefix=PREFIX, sample=SAMPLE),
+        filter_indel_final = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_indel_final.vcf", prefix=PREFIX, sample=SAMPLE),
+        zipped_filtered_snp_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_snp_final.vcf.gz", prefix=PREFIX, sample=SAMPLE),
+        zipped_filtered_indel_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_indel_final.vcf.gz", prefix=PREFIX, sample=SAMPLE),
         remove_snps_5_bp_snp_indel_file = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_5bp_indel_removed.vcf", prefix=PREFIX, sample=SAMPLE),
         zipped_5bp_indel_removed_snp_vcf_file = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_5bp_indel_removed.vcf.gz", prefix=PREFIX, sample=SAMPLE),
-        #freebayes_varcall = expand("results/{prefix}/{sample}/freebayes/{sample}_aln_freebayes_raw.vcf", prefix=PREFIX, sample=SAMPLE),
-        #csv_summary_file = expand("results/{prefix}/{sample}/annotated_files/{sample}_ANN.csv", prefix=PREFIX, sample=SAMPLE),
-        #annotated_vcf = expand("results/{prefix}/{sample}/annotated_files/{sample}_ANN.vcf", prefix=PREFIX, sample=SAMPLE),
-        #zipped_freebayes_varcall = expand("results/{prefix}/{sample}/freebayes/{sample}_aln_freebayes_raw.vcf.gz", prefix=PREFIX, sample=SAMPLE)
-        
-        #unecesssary 
-        #zipped_5bp_indel_removed_snp_vcf_file = expand("results/{prefix}/{sample}/remove_5_bp_snp_indel/{sample}_5bp_indel_removed.vcf.gz", prefix=PREFIX, sample=SAMPLE),
-        #zipped_filtered_snp_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_snp_final.vcf.gz", prefix=PREFIX, sample=SAMPLE),
-        #zipped_filtered_indel_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_indel_final.vcf.gz", prefix=PREFIX, sample=SAMPLE),
-        #zipped_indel_vcf = expand("results/{prefix}/{sample}/tabix/{sample}_filter_indel_final_zipped.gz", prefix=PREFIX, sample=SAMPLE),   
-        #zipped_snp_vcf = expand("results/{prefix}/{sample}/tabix/{sample}_filtered_snp_final_zipped.gz", prefix=PREFIX, sample=SAMPLE),   
-        #zipped_annotated_vcf = expand("results/{prefix}/{sample}/tabix/{sample}_ANN_zipped.gz", prefix=PREFIX, sample=SAMPLE)
+        freebayes_varcall = expand("results/{prefix}/{sample}/freebayes/{sample}_aln_freebayes_raw.vcf", prefix=PREFIX, sample=SAMPLE),
+        csv_summary_file = expand("results/{prefix}/{sample}/annotated_files/{sample}_ANN.csv", prefix=PREFIX, sample=SAMPLE),
+        annotated_vcf = expand("results/{prefix}/{sample}/annotated_files/{sample}_ANN.vcf", prefix=PREFIX, sample=SAMPLE),
+        zipped_freebayes_varcall = expand("results/{prefix}/{sample}/freebayes/{sample}_aln_freebayes_raw.vcf.gz", prefix=PREFIX, sample=SAMPLE)
         
 # trims the raw fastq files to give trimmed fastq files
 rule trim_reads:
@@ -236,11 +228,9 @@ rule trim_reads:
         window_size_quality=config["window_size_quality"],
         minlength=config["minlength"],
         headcrop_length=config["headcrop_length"],
-        threads = config["ncores"] # this uses bwa ncores
+        threads = config["ncores"] 
     log:
         trim_log = "logs/{prefix}/{sample}/trimmomatic/{sample}.log"
-    #conda:
-        #"envs/trimmomatic.yaml"
     singularity:
         "docker://staphb/trimmomatic:0.39"
     shell:
@@ -268,9 +258,7 @@ rule align_reads:
         r2 = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/downsample/{wildcards.sample}_R2_trim_paired.fastq.gz")
     output:
         aligned_sam_out = temp(f"results/{{prefix}}/{{sample}}/align_reads/{{sample}}_aln.sam")
-        #touch
     params:
-        #outdir = "results/{prefix}/{sample}/align_reads",
         num_cores = config["ncores"],
         ref_genome = config["reference_genome"],
         prefix = "{prefix}",
@@ -281,24 +269,8 @@ rule align_reads:
         bwa_log= "logs/{prefix}/{sample}/align_reads/{sample}.log"
     singularity:
         "docker://staphb/bwa:0.7.17"
-    #conda:
-        #"envs/bwa.yaml"
     shell:
         "./align_reads.sh {input.r1} {params.num_cores} {params.ref_genome} {input.r1} {input.r2} {output.aligned_sam_out}"
-        #"""
-        #split_field=$(python3 -c "from python_scripts.prepare_readgroup import prepare_readgroup; print(prepare_readgroup('{input.r1}'))") &&
-        #bwa mem -M -R "$split_field" -t {params.num_cores} {params.ref_genome} {input.r1} {input.r2} > {output.aligned_sam_out}
-        #"""
-        #"""
-        #mkdir -p {params.base_dir}/results/{params.prefix}/{params.sample}/align_reads/ &&
-        #split_field=$(python3 -c "from python_scripts.prepare_readgroup import prepare_readgroup; print(prepare_readgroup('{params.base_dir}/{input.r1}'))") && 
-        #bwa mem -M -R \"$split_field\" -t {params.num_cores} {params.ref_genome} {params.base_dir}/{input.r1} {params.base_dir}/{input.r2} > {params.base_dir}/{output.aligned_sam_out}
-        #"""
-        #"""
-        #mkdir -p {params.base_dir}/results/{params.prefix}/{params.sample}/align_reads/ &&
-        #split_field=$(zcat {input.r1} | awk 'NR==2{gsub("\t", "\\t"); print "@RG\\tID:"$1"\\tSM:"$1"\\tPL:ILLUMINA" }') &&
-        #bwa mem -M -R "$split_field" -t {params.num_cores} {params.ref_genome} {input.r1} {input.r2} > {output.aligned_sam_out}
-        #"""
 
 # samclip and sort bam file
 rule post_align_sam_to_bam:  
@@ -335,8 +307,6 @@ rule stats:
         index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sorted_bam_dups_removed/{wildcards.sample}_final.bam")
     output:
         alignment_stats = f"results/{{prefix}}/{{sample}}/stats/{{sample}}_alignment_stats.tsv" 
-    #conda:
-        #"envs/samtools.yaml"
     singularity:
         "docker://staphb/samtools:1.19"
     shell:
@@ -364,8 +334,6 @@ rule bedtools:
         index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sorted_bam_dups_removed/{wildcards.sample}_final.bam")
     output:
         unmapped_bed = f"results/{{prefix}}/{{sample}}/bedtools/bedtools_unmapped/{{sample}}_unmapped.bed"
-    #conda:
-        #"envs/bedtools.yaml"
     singularity:
         "docker://staphb/bedtools:2.31.1"
     shell:
@@ -382,8 +350,6 @@ rule parse_bed_file:
 
 # prepared reference size and window files
 rule prepare_references_files:
-    #input:
-        #reference_size_file = lambda wildcards: expand(f"results/{wildcards.prefix}/ref_genome_files/{wildcards.ref_name}.size")
     output:
         reference_size_file=f"results/{{prefix}}/ref_genome_files/{{ref_name}}.size",
         reference_window_file = f"results/{{prefix}}/ref_genome_files/{{ref_name}}.bed"
@@ -391,30 +357,6 @@ rule prepare_references_files:
         ref_genome = config["reference_genome"]
     wrapper:
         "file:python_scripts/prepare_reference_files"
-
-# created ref genome files 
-#rule bioawk:
-    #output:
-        #reference_size_file=f"results/{{prefix}}/ref_genome_files/{{ref_name}}.size"
-    #params:
-        #ref_genome = config["reference_genome"]
-    #conda:
-        #"envs/bioawk.yaml"
-    #shell:
-        #"bioawk -c fastx '{{ print $name, length($seq) }}' < {params.ref_genome} > {output.reference_size_file}"
-
-#create bed file from biowk
-#rule create_bed_file:
-    #input:
-        #index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sorted_bam_dups_removed/{wildcards.sample}_final.bam"),
-        #reference_size_file = lambda wildcards: expand(f"results/{wildcards.prefix}/ref_genome_files/{wildcards.ref_name}.size")
-    #output:
-        #bedgraph_cov = f"results/{{prefix}}/{{sample}}/bedtools/bedgraph_coverage/{{sample}}.bedcov",
-        #reference_window_file = f"results/{{prefix}}/ref_genome_files/{{ref_name}}.bed"
-    #conda:
-        #"envs/bedtools.yaml"
-    #shell:
-        #"bedtools makewindows -g {input.reference_size_file} -w 1000 > {output.reference_window_file}"
 
 rule bedgraph_cov:
     input:
@@ -424,8 +366,6 @@ rule bedgraph_cov:
         bedgraph_cov = f"results/{{prefix}}/{{sample}}/bedtools/bedgraph_coverage/{{sample}}.bedcov"
     singularity:
         "docker://staphb/bedtools:2.31.1"
-    #conda:
-        #"envs/bedtools.yaml"
     shell:
         "bedtools coverage -abam {input.index_sorted_dups_rmvd_bam} -b {input.reference_window_file} > {output.bedgraph_cov}"
 
@@ -440,7 +380,6 @@ rule gatk_call_indel:
         indel_file = f"results/{{prefix}}/{{sample}}/gatk_varcall/{{sample}}_indel.vcf",
         zipped_indel_vcf = f"results/{{prefix}}/{{sample}}/gatk_varcall/{{sample}}_indel.vcf.gz"
     params:
-        #haplotype = config["haplotype_parameters"],
         ref_genome = config["reference_genome"]
     wrapper:
         "file:python_scripts/gatk_call_indel"
@@ -452,8 +391,6 @@ rule bcftools_call_snps:
         index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sorted_bam_dups_removed/{wildcards.sample}_final.bam"),
     output:
         final_raw_vcf = f"results/{{prefix}}/{{sample}}/samtools_varcall/{{sample}}_aln_mpileup_raw.vcf",
-        #zipped_final_raw_vcf = f"results/{{prefix}}/{{sample}}/samtools_varcall/{{sample}}_aln_mpileup_raw.vcf.gz"
-        #final_raw_postalign_vcf = f"results/{{prefix}}/{{sample}}/samtools_varcall/{{sample}}_aln_mpileup_postalign_raw.vcf"
     params:
         ref_genome = config["reference_genome"], 
         #mpileup_params = config["mpileup_parameters"],
@@ -463,9 +400,6 @@ rule bcftools_call_snps:
         """
         bcftools mpileup -f {params.ref_genome} {input.index_sorted_dups_rmvd_bam} | bcftools call -Ov -v -c -o {output.final_raw_vcf}
         """
-    #wrapper:
-        #"file:python_scripts/bcftools_call_snps"
-        #module load Bioinformatics bcftools/1.12-g4b275e 
 
 rule freebayes: 
     input:
@@ -477,11 +411,7 @@ rule freebayes:
         ref_genome = config["reference_genome"], 
     conda:
         "envs/freebayes.yaml"
-    #singularity:
-        #"docker://staphb/freebayes:1.3.7",
-        #"docker://staphb/htslib:1.19"
     shell:
-        #"freebayes -f {params.ref_genome} {input.index_sorted_dups_rmvd_bam} > {output.freebayes_varcall}"
         """
         freebayes -f {params.ref_genome} {input.index_sorted_dups_rmvd_bam} > {output.freebayes_varcall}
         bgzip -c {output.freebayes_varcall} > {output.zipped_freebayes_varcall}
@@ -510,8 +440,6 @@ rule hard_filter:
         mq_snp_filter = config["mq_snp_filter"],
         qual_snp_filter = config["qual_snp_filter"],
         af_snp_filter = config["af_snp_filter"]
-    #conda:
-        #"envs/gatk.yaml"
     wrapper:
         "file:python_scripts/hard_filter"
 
@@ -522,16 +450,8 @@ rule remove_5_bp_snp_indel:
         indel_vcf = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/filtered_vcf/{wildcards.sample}_filter_indel_final.vcf")
     output:
         remove_snps_5_bp_snp_indel_file = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}_5bp_indel_removed.vcf",
-        #zipped_indel_vcf = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}_5bp_indel_removed.vcf.gz"
     run:
         remove_5_bp_snp_indel(input.snp_vcf[0], input.indel_vcf[0], output.remove_snps_5_bp_snp_indel_file)
-    #wrapper:
-        #"file:python_scripts/remove_5_bp_snp_indel"
-    #shell:
-        ##"""
-        #remove_snps_5_bp_snp_indel_file=$(python3 -c "from python_scripts.remove_5_bp_snp_indel: import remove_5_bp_snp_indel; print(prepare_readgroup('{input.snp_vcf[0], input.indel_vcf[0], output.remove_snps_5_bp_snp_indel_file}'))")
-        #"""
-
 
 # create snpEff database from ref genome
 rule install_annotate_snpEff:
@@ -543,44 +463,18 @@ rule install_annotate_snpEff:
         annotated_vcf = f"results/{{prefix}}/{{sample}}/annotated_files/{{sample}}_ANN.vcf"
     params:
         snpeff_parameters = config["snpeff_parameters"],
-        #snpeff_path = config["snpEff_path"],
-        #data_directory = config["data_dir"],
-        #snpEff_config_file = config["snpEff_config_file"],
         snpEff_db = REF_NAME, # figure out how to call wildcards for ref_name 
         base_dir = my_basedir
     wrapper:
         "file:python_scripts/install_snpEff"
 
-#rule annotate:
-    #input:
-        #remove_snps_5_bp_snp_indel_file = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/remove_5_bp_snp_indel/{wildcards.sample}_5bp_indel_removed.vcf"),
-        #snpeff_db = expand("data/{ref_name}/snpEffectPredictor.bin", ref_name=REF_NAME)
-    #output:
-        #csv_summary_file = f"results/{{prefix}}/{{sample}}/annotated_files/{{sample}}_ANN.csv",
-        #annotated_vcf = f"results/{{prefix}}/{{sample}}/annotated_files/{{sample}}_ANN.vcf"
-    #params:
-        #snpeff_parameters = config["snpeff_parameters"],
-        #snpeff_path = config["snpEff_path"],
-        #data_directory = config["data_dir"],
-        #snpEff_db = lambda wildcards: REF_NAME,
-        #snpEff_config_file = config["snpEff_config_file"]
-    #shell:
-        #"java -jar {params.snpeff_path} -csvStats {output.csv_summary_file} -dataDir {params.data_directory} {params.snpeff_parameters} -c {params.snpEff_config_file} {params.snpEff_db} {input.remove_snps_5_bp_snp_indel_file} > {output.annotated_vcf}" 
-
 rule remove_5_bp_snp_indel_vcf:
     input:
-        #indel_vcf = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/filtered_vcf/{wildcards.sample}_filter_indel_final.vcf"),
         remove_snps_5_bp_snp_indel_file = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/filtered_vcf/{wildcards.sample}_5bp_indel_removed.vcf"),
         final_raw_vcf = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/samtools_varcall/{wildcards.sample}_aln_mpileup_raw.vcf"),
-        #annotated_vcf = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/annotated_files/{wildcards.sample}_ANN.vcf")
     output:
         zipped_final_raw_vcf = f"results/{{prefix}}/{{sample}}/samtools_varcall/{{sample}}_aln_mpileup_raw.vcf.gz",
         zipped_remove_snps_5_bp_snp_indel_file = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}_5bp_indel_removed.vcf.gz"
-        #zipped_indel_vcf = f"results/{{prefix}}/{{sample}}/tabix/{{sample}}_filter_indel_final_zipped.gz",
-        #zipped_snp_vcf = f"results/{{prefix}}/{{sample}}/tabix/{{sample}}_filtered_snp_final_zipped.gz", 
-        #zipped_annotated_vcf = f"results/{{prefix}}/{{sample}}/tabix/{{sample}}_ANN_zipped.gz",
-    #conda:
-        #"envs/samtools.yaml"
     singularity:
         "docker://staphb/htslib:1.19"
     shell:
