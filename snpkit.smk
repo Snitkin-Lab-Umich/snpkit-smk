@@ -192,18 +192,23 @@ rule all:
         freebayes_varcall = expand("results/{prefix}/{sample}/freebayes/{sample}_aln_freebayes_raw.vcf", prefix=PREFIX, sample=SAMPLE),
         csv_summary_file = expand("results/{prefix}/{sample}/annotated_files/{sample}_ANN.csv", prefix=PREFIX, sample=SAMPLE),
         annotated_vcf = expand("results/{prefix}/{sample}/annotated_files/{sample}_ANN.vcf", prefix=PREFIX, sample=SAMPLE),
-        zipped_freebayes_varcall = expand("results/{prefix}/{sample}/freebayes/{sample}_aln_freebayes_raw.vcf.gz", prefix=PREFIX, sample=SAMPLE)
+        zipped_freebayes_varcall = expand("results/{prefix}/{sample}/freebayes/{sample}_aln_freebayes_raw.vcf.gz", prefix=PREFIX, sample=SAMPLE),
+        
         
 # trims the raw fastq files to give trimmed fastq files
-rule trim_reads:
+rule trim_raw_reads:
     input:
         r1 = lambda wildcards: expand(str(config["input_reads"] + "/" + f"{wildcards.sample}_R1.fastq.gz")),
         r2 = lambda wildcards: expand(str(config["input_reads"] + "/" + f"{wildcards.sample}_R2.fastq.gz"))
     output:
-        r1 = temp(f"results/{{prefix}}/{{sample}}/trimmomatic/{{sample}}_R1_trim_paired.fastq.gz"),
-        r2 = temp(f"results/{{prefix}}/{{sample}}/trimmomatic/{{sample}}_R2_trim_paired.fastq.gz"), 
-        r1_unpaired = temp(f"results/{{prefix}}/{{sample}}/trimmomatic/{{sample}}_R1_trim_unpaired.fastq.gz"),
-        r2_unpaired = temp(f"results/{{prefix}}/{{sample}}/trimmomatic/{{sample}}_R2_trim_unpaired.fastq.gz")
+        #r1 = temp(f"results/{{prefix}}/{{sample}}/trimmomatic/{{sample}}_R1_trim_paired.fastq.gz"),
+        #r2 = temp(f"results/{{prefix}}/{{sample}}/trimmomatic/{{sample}}_R2_trim_paired.fastq.gz"), 
+        #r1_unpaired = temp(f"results/{{prefix}}/{{sample}}/trimmomatic/{{sample}}_R1_trim_unpaired.fastq.gz"),
+        #r2_unpaired = temp(f"results/{{prefix}}/{{sample}}/trimmomatic/{{sample}}_R2_trim_unpaired.fastq.gz")
+        r1 = f"results/{{prefix}}/{{sample}}/trimmomatic/{{sample}}_R1_trim_paired.fastq.gz",
+        r2 = f"results/{{prefix}}/{{sample}}/trimmomatic/{{sample}}_R2_trim_paired.fastq.gz", 
+        r1_unpaired = f"results/{{prefix}}/{{sample}}/trimmomatic/{{sample}}_R1_trim_unpaired.fastq.gz",
+        r2_unpaired = f"results/{{prefix}}/{{sample}}/trimmomatic/{{sample}}_R2_trim_unpaired.fastq.gz"
     params:
         adapter_filepath=config["adaptor_filepath"],
         seed=config["seed_mismatches"],
@@ -224,7 +229,7 @@ rule trim_reads:
         "trimmomatic PE {input.r1} {input.r2} {output.r1} {output.r1_unpaired} {output.r2} {output.r2_unpaired} -threads {params.threads} ILLUMINACLIP:{params.adapter_filepath}:{params.seed}:{params.palindrome_clip}:{params.simple_clip}:{params.minadapterlength}:{params.keep_both_reads} SLIDINGWINDOW:{params.window_size}:{params.window_size_quality} MINLEN:{params.minlength} HEADCROP:{params.headcrop_length} &>{log.trim_log}"
 
 # downsamples trimmed fastq files
-rule downsample:
+rule downsample_clean_reads:
     input:
         r1 = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/trimmomatic/" + f"{wildcards.sample}_R1_trim_paired.fastq.gz"),
         r2 = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/trimmomatic/" + f"{wildcards.sample}_R2_trim_paired.fastq.gz")
@@ -242,7 +247,8 @@ rule align_reads:
         r1 = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/downsample/{wildcards.sample}_R1_trim_paired.fastq.gz"),
         r2 = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/downsample/{wildcards.sample}_R2_trim_paired.fastq.gz")
     output:
-        aligned_sam_out = temp(f"results/{{prefix}}/{{sample}}/align_reads/{{sample}}_aln.sam")
+        #aligned_sam_out = temp(f"results/{{prefix}}/{{sample}}/align_reads/{{sample}}_aln.sam")
+        aligned_sam_out = f"results/{{prefix}}/{{sample}}/align_reads/{{sample}}_aln.sam"
     params:
         num_cores = config["ncores"],
         ref_genome = config["reference_genome"],
@@ -258,13 +264,16 @@ rule align_reads:
         "./align_reads.sh {input.r1} {params.num_cores} {params.ref_genome} {input.r1} {input.r2} {output.aligned_sam_out} &> {log.bwa_log}"
 
 # samclip and sort bam file
-rule post_align_sam_to_bam:  
+rule removed_clipped_reads:  
     input:
         aligned_sam_out = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/align_reads/{wildcards.sample}_aln.sam")
     output:
-        clipped_sam_out = temp(f"results/{{prefix}}/{{sample}}/post_align/samclip/{{sample}}_clipped.sam"),
-        bam_out = temp(f"results/{{prefix}}/{{sample}}/post_align/aligned_bam/{{sample}}_aln.bam"),
-        sorted_bam_out = temp(f"results/{{prefix}}/{{sample}}/post_align/sorted_bam/{{sample}}_aln_sort.bam")
+        #clipped_sam_out = temp(f"results/{{prefix}}/{{sample}}/post_align/samclip/{{sample}}_clipped.sam"),
+        clipped_sam_out = f"results/{{prefix}}/{{sample}}/post_align/samclip/{{sample}}_clipped.sam",
+        #bam_out = temp(f"results/{{prefix}}/{{sample}}/post_align/aligned_bam/{{sample}}_aln.bam"),
+        bam_out = f"results/{{prefix}}/{{sample}}/post_align/aligned_bam/{{sample}}_aln.bam",
+        #sorted_bam_out = temp(f"results/{{prefix}}/{{sample}}/post_align/sorted_bam/{{sample}}_aln_sort.bam")
+        sorted_bam_out = f"results/{{prefix}}/{{sample}}/post_align/sorted_bam/{{sample}}_aln_sort.bam"
     params:
         outdir_temp = "results/{prefix}/{sample}/post_align/sorted_bam/{sample}_aln_sort_temp",
         prefix = "{sample}",
@@ -276,11 +285,12 @@ rule post_align_sam_to_bam:
         "file:wrapper_functions/sam_to_bam"
 
 # remove duplicates and sort and index bam file with duplicates removed 
-rule post_align_remove_duplicates:
+rule post_align_remove_pcr_duplicates:
     input:
         sorted_bam_out = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sorted_bam/{wildcards.sample}_aln_sort.bam")
     output:
-        bam_duplicates_removed_out = temp(f"results/{{prefix}}/{{sample}}/post_align/remove_duplicates/{{sample}}_aln_marked.bam"),
+        #bam_duplicates_removed_out = temp(f"results/{{prefix}}/{{sample}}/post_align/remove_duplicates/{{sample}}_aln_marked.bam"),
+        bam_duplicates_removed_out = f"results/{{prefix}}/{{sample}}/post_align/remove_duplicates/{{sample}}_aln_marked.bam",
         dups_rmvd_sorted_bam_out = f"results/{{prefix}}/{{sample}}/post_align/sorted_bam_dups_removed/{{sample}}_final.bam"
     params:
         outdir_dups_removed = "results/{prefix}/{sample}/post_align/remove_duplicates",
@@ -293,7 +303,7 @@ rule post_align_remove_duplicates:
         "file:wrapper_functions/post_align_remove_duplicates"
     
 # determine statistics of file
-rule stats:
+rule alignment_stats:
     input:
         index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sorted_bam_dups_removed/{wildcards.sample}_final.bam")
     output:
@@ -306,7 +316,7 @@ rule stats:
         "samtools flagstat {input.index_sorted_dups_rmvd_bam} > {output.alignment_stats} &> {log}" 
 
 # determine coverage of bam file       
-rule coverage_depth:
+rule gatk_coverage_depth_statistics:
     input:
         index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sorted_bam_dups_removed/{wildcards.sample}_final.bam")
     output:
@@ -326,7 +336,7 @@ rule coverage_depth:
         "gatk DepthOfCoverage -R {params.ref_genome} -O {params.outdir}/{params.prefix}_depth_of_coverage -I {input.index_sorted_dups_rmvd_bam} --summary-coverage-threshold 1 --summary-coverage-threshold 5 --summary-coverage-threshold 9 --summary-coverage-threshold 10 --summary-coverage-threshold 15 --summary-coverage-threshold 20 --summary-coverage-threshold 25 --ignore-deletion-sites --intervals {params.intervals} &> {log}"
 
 # bedtools
-rule bedtools:
+rule bedtools_extract_coverage:
     input:
         index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sorted_bam_dups_removed/{wildcards.sample}_final.bam")
     output:
@@ -336,10 +346,10 @@ rule bedtools:
     singularity:
         "docker://staphb/bedtools:2.31.1"
     shell:
-        "bedtools genomecov -ibam {input.index_sorted_dups_rmvd_bam} -bga | awk '$4==0' > {output.unmapped_bed} &> {log}"
+        "bedtools genomecov -ibam {input.index_sorted_dups_rmvd_bam} -bga | awk '$4==0' > {output.unmapped_bed}"
 
 # returns unmapped positions file    
-rule parse_bed_file:
+rule parse_bed_file_find_unmapped_regions:
     input:
         unmapped_bed = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/bedtools/bedtools_unmapped/{wildcards.sample}_unmapped.bed")
     output:
@@ -348,7 +358,7 @@ rule parse_bed_file:
         parse_bed_file(input.unmapped_bed[0])
 
 # prepared reference size and window files
-rule prepare_references_files:
+rule prepare_reference_windows:
     output:
         reference_size_file=f"results/{{prefix}}/ref_genome_files/{{ref_name}}.size",
         reference_window_file = f"results/{{prefix}}/ref_genome_files/{{ref_name}}.bed"
@@ -357,7 +367,7 @@ rule prepare_references_files:
     wrapper:
         "file:wrapper_functions/prepare_reference_files"
 
-rule bedgraph_cov:
+rule bedcoverage:
     input:
         index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sorted_bam_dups_removed/{wildcards.sample}_final.bam"),
         reference_window_file = expand("results/{prefix}/ref_genome_files/{ref_name}.bed", prefix=PREFIX, ref_name=REF_NAME)
@@ -373,7 +383,7 @@ rule bedgraph_cov:
 # variant calling 
 # gatk
 # calling snp/indel and subset of variants using gatk
-rule gatk_call_indel:
+rule gatk_call_indels:
     input:
         index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sorted_bam_dups_removed/{wildcards.sample}_final.bam"),
     output:
@@ -403,7 +413,7 @@ rule bcftools_call_snps:
     shell:
         "bcftools mpileup -f {params.ref_genome} {input.index_sorted_dups_rmvd_bam} | bcftools call -Ov -v -c -o {output.final_raw_vcf} &> {log}"
 
-rule freebayes: 
+rule freebayes_allele_frequency: 
     input:
         index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sorted_bam_dups_removed/{wildcards.sample}_final.bam"),
     output:
@@ -421,7 +431,7 @@ rule freebayes:
         bgzip -c {output.freebayes_varcall} > {output.zipped_freebayes_varcall} && tabix -p vcf -f {output.zipped_freebayes_varcall} &> {log}
         """
 
-rule hard_filter:
+rule variant_hard_filter:
     input:
         final_raw_snp_vcf = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/samtools_varcall/{wildcards.sample}_aln_mpileup_raw.vcf"),
         final_raw_indel_vcf = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/gatk_varcall/{wildcards.sample}_indel.vcf")
@@ -450,7 +460,7 @@ rule hard_filter:
         "file:wrapper_functions/hard_filter"
 
 # remove snps with 5bp of an indel 
-rule remove_5_bp_snp_indel:
+rule remove_5_bp_snp_flanking_to_indels:
     input:
         snp_vcf = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/filtered_vcf/{wildcards.sample}_filter_snp_final.vcf"),
         indel_vcf = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/filtered_vcf/{wildcards.sample}_filter_indel_final.vcf")
@@ -460,7 +470,7 @@ rule remove_5_bp_snp_indel:
         remove_5_bp_snp_indel(input.snp_vcf[0], input.indel_vcf[0], output.remove_snps_5_bp_snp_indel_file)
 
 # create snpEff database from ref genome
-rule install_annotate_snpEff:
+rule snpEff_annotation:
     input:
         remove_snps_5_bp_snp_indel_file = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/filtered_vcf/{wildcards.sample}_5bp_indel_removed.vcf")
     output:
@@ -475,10 +485,11 @@ rule install_annotate_snpEff:
     wrapper:
         "file:wrapper_functions/install_snpEff"
 
-rule remove_5_bp_snp_indel_vcf:
+rule tabix_index_vcf:
     input:
         remove_snps_5_bp_snp_indel_file = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/filtered_vcf/{wildcards.sample}_5bp_indel_removed.vcf"),
         final_raw_vcf = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/samtools_varcall/{wildcards.sample}_aln_mpileup_raw.vcf"),
+        
     output:
         zipped_final_raw_vcf = f"results/{{prefix}}/{{sample}}/samtools_varcall/{{sample}}_aln_mpileup_raw.vcf.gz",
         zipped_remove_snps_5_bp_snp_indel_file = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}_5bp_indel_removed.vcf.gz"
@@ -491,3 +502,5 @@ rule remove_5_bp_snp_indel_vcf:
 
        bgzip -c {input.final_raw_vcf} > {output.zipped_final_raw_vcf} && tabix -p vcf -f {output.zipped_final_raw_vcf}
        """
+
+
