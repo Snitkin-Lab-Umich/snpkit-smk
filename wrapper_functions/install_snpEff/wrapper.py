@@ -67,3 +67,8 @@ with open("config/config.yaml", "w") as file:
     yaml.dump(config, file)
 
 shell("java -jar {snpeff_path} -csvStats {snakemake.output.csv_summary_file} -dataDir {data_directory} {snakemake.params.snpeff_parameters} -c {snpEff_config_file} {snakemake.params.snpEff_db} {snakemake.input.remove_snps_5_bp_snp_indel_file} > {snakemake.output.annotated_vcf}")
+
+shell("java -jar {snpeff_path} -csvStats {snakemake.output.summary_file_filter_snp_final} -dataDir {data_directory} {snakemake.params.snpeff_parameters} -c {snpEff_config_file} {snakemake.params.snpEff_db} {snakemake.input.filter_snp_final} > {snakemake.output.annotated_filter_snp_final}")
+
+shell("java -jar {snpeff_path} -csvStats {snakemake.output.summary_file_filter_indel_final} -dataDir {data_directory} {snakemake.params.snpeff_parameters} -c {snpEff_config_file} {snakemake.params.snpEff_db} {snakemake.input.filter_indel_final} > {snakemake.output.annotated_filter_indel_final}")
+

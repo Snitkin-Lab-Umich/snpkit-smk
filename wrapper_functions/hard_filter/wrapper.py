@@ -31,6 +31,11 @@ shell("""
        tabix -p vcf -f {snakemake.output.zipped_filtered_snp_vcf}
     """)
 
+shell("""
+       bgzip -c {snakemake.output.filter_snp_vcf} > {snakemake.output.zipped_filter_snp_vcf} &&
+       tabix -p vcf -f {snakemake.output.zipped_filter_snp_vcf}
+    """)
+
 # indels       
 gatk_indel_filter_parameter_expression="%s && %s && %s && %s" % (dp_indel_filter, mq_indel_filter, qual_indel_filter, af_indel_filter)
 shell("gatk VariantFiltration -R {ref_genome} -O {snakemake.output.filter_indel_vcf} --variant {snakemake.input.final_raw_indel_vcf} --filter-expression \"{gatk_indel_filter_parameter_expression}\" --filter-name PASS_filter&> {snakemake.log.gatk_indels}")
@@ -39,4 +44,9 @@ shell("grep '#\|PASS_filter' {snakemake.output.filter_indel_vcf} > {snakemake.ou
 shell("""
        bgzip -c {snakemake.output.filter_indel_final} > {snakemake.output.zipped_filtered_indel_vcf} &&
        tabix -p vcf -f {snakemake.output.zipped_filtered_indel_vcf}
+    """)
+
+shell("""
+       bgzip -c {snakemake.output.filter_indel_vcf} > {snakemake.output.zipped_filter_indel_vcf} &&
+       tabix -p vcf -f {snakemake.output.zipped_filter_indel_vcf}
     """)
