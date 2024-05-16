@@ -199,6 +199,8 @@ rule all:
         csv_summary_file = expand("results/{prefix}/{sample}/annotated_files/{sample}_ANN.csv", prefix=PREFIX, sample=SAMPLE),
         annotated_vcf = expand("results/{prefix}/{sample}/annotated_files/{sample}_ANN.vcf", prefix=PREFIX, sample=SAMPLE),
         zipped_freebayes_varcall = expand("results/{prefix}/{sample}/freebayes/{sample}_aln_freebayes_raw.vcf.gz", prefix=PREFIX, sample=SAMPLE),
+        zipped_filter_snp_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_snp.vcf.gz", prefix=PREFIX, sample=SAMPLE),
+        zipped_filter_indel_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_indel.vcf.gz", prefix=PREFIX, sample=SAMPLE)
         
         
 # trims the raw fastq files to give trimmed fastq files
@@ -450,7 +452,9 @@ rule variant_hard_filter:
         filter_indel_vcf = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}_filter_indel.vcf",
         filter_indel_final = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}_filter_indel_final.vcf",
         zipped_filtered_snp_vcf = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}_filter_snp_final.vcf.gz",
-        zipped_filtered_indel_vcf = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}_filter_indel_final.vcf.gz"
+        zipped_filtered_indel_vcf = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}_filter_indel_final.vcf.gz",
+        zipped_filter_snp_vcf = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}_filter_snp.vcf.gz",
+        zipped_filter_indel_vcf = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}_filter_indel.vcf.gz",
     params:
         ref_genome = config["reference_genome"],
         dp_indel_filter = config["dp_indel_filter"],
@@ -482,10 +486,16 @@ rule remove_5_bp_snp_flanking_to_indels:
 # create snpEff database from ref genome
 rule snpEff_annotation:
     input:
-        remove_snps_5_bp_snp_indel_file = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/filtered_vcf/{wildcards.sample}_5bp_indel_removed.vcf")
+        remove_snps_5_bp_snp_indel_file = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/filtered_vcf/{wildcards.sample}_5bp_indel_removed.vcf"),
+        filter_snp_final = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/filtered_vcf/{wildcards.sample}_filter_snp_final.vcf"),
+        filter_indel_final = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/filtered_vcf/{wildcards.sample}_filter_indel_final.vcf")
     output:
         csv_summary_file = f"results/{{prefix}}/{{sample}}/annotated_files/{{sample}}_ANN.csv",
-        annotated_vcf = f"results/{{prefix}}/{{sample}}/annotated_files/{{sample}}_ANN.vcf"
+        annotated_vcf = f"results/{{prefix}}/{{sample}}/annotated_files/{{sample}}_ANN.vcf",
+        annotated_filter_snp_final = f"results/{{prefix}}/{{sample}}/annotated_files/{{sample}}_filter_snp_final_ANN.vcf",
+        annotated_filter_indel_final = f"results/{{prefix}}/{{sample}}/annotated_files/{{sample}}_filter_indel_final_ANN.vcf",
+        summary_file_filter_snp_final = f"results/{{prefix}}/{{sample}}/annotated_files/{{sample}}_filter_snp_final_ANN.csv",
+        summary_file_filter_indel_final = f"results/{{prefix}}/{{sample}}/annotated_files/{{sample}}_filter_indel_final_ANN.csv"
     params:
         snpeff_parameters = config["snpeff_parameters"],
         snpEff_db = REF_NAME, # figure out how to call wildcards for ref_name 
