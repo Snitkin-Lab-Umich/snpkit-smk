@@ -1,0 +1,285 @@
+# Set which tools to use in pipeline:
+[pipeline]
+# Options for Aligner:bwa / bowtie
+aligner: bwa
+# Options for variant_caller: samtools / gatkhaplotypecaller / freebayes
+variant_caller: samtools
+
+[scheduler]
+resources: nodes=1:ppn=4,pmem=4000mb,walltime=250:00:00
+large_resources: nodes=1:ppn=12,mem=47gb,walltime=250:00:00
+email: apirani@med.umich.edu
+queue: flux
+flux_account: esnitkin_flux
+notification: a
+
+[pbs]
+resources: nodes=1:ppn=4,pmem=4000mb,walltime=250:00:00
+large_resources: nodes=1:ppn=12,mem=47gb,walltime=250:00:00
+email: apirani@med.umich.edu
+queue: flux
+flux_account: esnitkin0
+notification: a,b,e
+
+[slurm]
+resources: --nodes=1 --ntasks=1 --cpus-per-task=16 --mem=80g --time=250:00:00
+large_resources: --nodes=1 --ntasks-per-node=12 --mem=47000mb --time=250:00:00
+email: apirani@med.umich.edu
+partition: standard
+flux_account: esnitkin0
+notification: BEGIN,END,FAIL,REQUEUE
+
+# Set command line Parameters for individual tools used by snpkit
+
+# Trimmomatic
+[Trimmomatic]
+trimmomatic_bin: //
+adaptor_filepath: /home/apirani/.conda/envs/variantcalling_clone/share/trimmomatic-0.39-1/adapters/combined_Adaptors.fa
+seed_mismatches: 2
+palindrome_clipthreshold: 30
+simple_clipthreshold: 10
+minadapterlength: 8
+#change this to true and see the effect on alignment
+keep_both_reads: true
+window_size: 4
+window_size_quality: 20
+minlength: 40
+headcrop_length: 0
+colon: :
+targetlength: 125
+crop_length: 40
+f_p: forward_paired.fq.gz
+f_up: forward_unpaired.fq.gz
+r_p: reverse_paired.fq.gz
+r_up: reverse_unpaired.fq.gz
+
+[bwa]
+bwa_bin: //
+cores: 8
+base_cmd: bwa
+algorithm: mem
+index: index
+RG_header: -R
+Mark_splithits: -M
+
+[bowtie]
+bowtie_bin: //
+cores: 8
+build_cmd: bowtie2-build
+align_cmd: bowtie2
+parameters: -k 1 --non-deterministic --end-to-end
+
+[samtools]
+samtools_bin: //
+base_cmd: samtools
+#minimum mapping quality
+#change parameter S to -t SP and D to -t DP
+mpileup_parameters: -ug -f
+faiindex: faidx
+#-q30 -B -E -C50
+
+[bcftools]
+bcftools_bin: //
+base_cmd: bcftools
+call_parameters: -vg
+
+[picard]
+picard_bin: //
+base_cmd: picard
+
+[gatk]
+gatk_bin: //
+base_cmd: gatk
+haplotype_parameters: HaplotypeCaller
+
+[vcftools]
+vcftools_bin: //
+tabix_bin: //
+
+[qualimap]
+qualimap_bin: //
+base_cmd: qualimap
+
+[bedtools]
+bedtools_bin: //
+base_cmd: bedtools
+version_for_coverage: /version_for_coverage/
+
+[bioawk]
+bioawk_bin: //
+base_cmd: bioawk
+
+[fasttree]
+fasttree_bin: //
+#For Multithread fasttree; use FastTreeMP executable file
+base_cmd: FastTree
+
+[raxml]
+raxml_bin: //
+openmpi_bin: //
+# Other raxml executable available to use: raxmlHPC-PTHREADS,raxmlHPC-PTHREADS-SSE3,raxmlHPC-SSE3
+base_cmd: raxmlHPC-HYBRID-SSE3
+parameters: -f a -x 12345 -p 12345 -N autoMRE -m GTRCAT -T 20
+
+[iqtree]
+iqtree_bin: //
+base_cmd: iqtree
+parameters: -nt AUTO -bb 1000 -m GTR+G+ASC
+
+[gubbins]
+# Change this path to wherever gubbins is located/installed. Right now, installed using conda from anaconda3 package installed in bin_group.
+gubbins_bin: //
+base_cmd: run_gubbins.py
+
+[mummer]
+mummer_bin: //
+nucmer_base_cmd: nucmer
+min_tandem_repeat_length: 20
+percent_id: 95
+
+[SNP_filters]
+filter_criteria: snpkit
+
+[snpkit]
+avg_depth: no
+# If AVG_DEPTH is yes, the below DP threshold will be ignored. Instead, LOW_DEPTH and HIGH_DEPTH filter parameter will be used.
+# Filter variants with Depth less than the below threshold
+dp: 9
+# A value of 2 means that regions with less than half of the average coverage of the entire genome will fail
+low_depth: 2
+# A value of 5 means that regions with 5x depth greater than the average coverage will fail
+high_depth: 5
+# Filter variants with FQ(Consensus Quality) greater than the below threshold
+fq: 0.025
+fq2: 0.025
+# Filter variants with MQ(Root Mean Square Quality) less than the below threshold
+mq: 50
+# Filter variants with Variant QUAL less than the below threshold
+qual: 100
+# Filter variants with GATK QualbyDepth QD parameter; filter less than the below threshold. Currently, being used for Indel SNPS only.
+qd: 2.00
+# Filter variants with AF1 less than the below threshold
+af: 0.900
+# Filter Variants that are proximate to each other within this number of range. To turn this off, use 0(zero).
+prox: 0
+
+
+[gatk_haplotypecaller_filters]
+avg_depth: no
+# If AVG_DEPTH is yes, the below DP threshold will be ignored. Instead, LOW_DEPTH and HIGH_DEPTH filter parameter will be used.
+# Filter variants with Depth less than the below threshold
+dp: 9
+# A value of 2 means that regions with less than half of the average coverage of the entire genome will fail
+low_depth: 2
+# A value of 5 means that regions with 5x depth greater than the average coverage will fail
+high_depth: 5
+# FQ not represented in GATK Haplotype caller vcf format. Instead use AF.
+# Filter variants with MQ(Root Mean Square Quality) less than the below threshold
+mq: 50
+# Filter variants with Variant QUAL less than the below threshold
+qual: 2
+# Filter variants with AF1 less than the below threshold
+af: 0.9
+# Filter Variants that are proximate to each other within this number of range. To turn this off, use 0(zero).
+prox: 0
+
+[rna_filters]
+avg_depth: no
+# If AVG_DEPTH is yes, the below DP threshold will be ignored. Instead, LOW_DEPTH and HIGH_DEPTH filter parameter will be used.
+# Filter variants with Depth less than the below threshold
+dp: 3
+# A value of 2 means that regions with less than half of the average coverage of the entire genome will fail
+low_depth: 2
+# A value of 5 means that regions with 5x depth greater than the average coverage will fail
+high_depth: 5
+# Filter variants with FQ(Consensus Quality) greater than the below threshold
+fq: 0.00
+fq2: 0.00
+# Filter variants with MQ(Root Mean Square Quality) less than the below threshold
+mq: 50
+# Filter variants with Variant QUAL less than the below threshold
+qual: 0
+# Filter variants with AF1 less than the below threshold
+af: 0.9
+# Filter Variants that are proximate to each other
+prox: 1
+
+[contamination_filters]
+avg_depth: no
+# If AVG_DEPTH is yes, the below DP threshold will be ignored. Instead, LOW_DEPTH and HIGH_DEPTH filter parameter will be used.
+# Filter variants with Depth less than the below threshold
+dp: 3
+# A value of 2 means that regions with less than half of the average coverage of the entire genome will fail
+low_depth: 2
+# A value of 5 means that regions with 5x depth greater than the average coverage will fail
+high_depth: 5
+# Filter variants with FQ(Consensus Quality) greater than the below threshold
+fq: -20.00
+fq2: -20.00
+# Filter variants with MQ(Root Mean Square Quality) less than the below threshold
+mq: 50
+# Filter variants with Variant QUAL less than the below threshold
+qual: 0
+# Filter variants with AF1 less than the below threshold
+af: 1
+# Filter Variants that are proximate to each other
+prox: 1
+
+[functional_filters]
+apply_functional_filters: yes
+find_phage_region: yes
+find_repetitive_region: yes
+mask_region: no
+mask_file: mask.txt
+mobile_elements: yes
+apply_to_calls: yes
+
+##SNP annotations
+[snpeff]
+snpeff_bin: //
+base_cmd: snpEff
+snpeff_parameters: -d -no-downstream -no-upstream
+prebuild: no
+db: 
+dataDir: /data/
+
+########################################################################################################################
+
+# Reference Genome to be used for pipeline
+# Set path for already indexed reference genome
+[index]
+# Name of reference genome fasta file.
+Ref_Name: index.fasta
+# path to the reference genome fasta file.
+Ref_Path: /path-to/reference/index/
+
+# Name of the reference genome. Provide this value with -index_name argument.
+[KPNIH1]
+# Name of reference genome fasta file.
+Ref_Name: KPNIH1.fasta
+# path to the reference genome fasta file.
+Ref_Path: /nfs/esnitkin/bin_group/variant_calling_bin/reference/KPNIH1/
+
+[MRSA_USA_300]
+# Name of reference genome fasta file.
+Ref_Name: MRSA_USA_300.fasta
+# path to the reference genome fasta file.
+Ref_Path: /nfs/esnitkin/bin_group/variant_calling_bin/reference/MRSA_USA_300/
+
+[CDIFF_630_ncbi]
+# Name of reference genome fasta file.
+Ref_Name: cdiff_630.fasta
+# path to the reference genome fasta file.
+Ref_Path: /nfs/esnitkin/bin_group/variant_calling_bin/reference/CDIFF_630_ncbi/
+
+[Ecoli_NCTC13441_ST131]
+# Name of reference genome fasta file.
+Ref_Name: Ecoli_NCTC13441_ST131.fasta
+# path to the reference genome fasta file.
+Ref_Path: /nfs/esnitkin/bin_group/variant_calling_bin/reference/Ecoli_NCTC13441_ST131/
+
+# This setting is deprecated. snpkit uses conda environments for 
+# Set bin folder path. Please make sure all the executables are placed in bin folder. Also make sure the path for individual tools are correct.
+[bin_path]
+binbase: 
+
