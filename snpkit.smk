@@ -200,7 +200,9 @@ rule all:
         annotated_vcf = expand("results/{prefix}/{sample}/annotated_files/{sample}_ANN.vcf", prefix=PREFIX, sample=SAMPLE),
         zipped_freebayes_varcall = expand("results/{prefix}/{sample}/freebayes/{sample}_aln_freebayes_raw.vcf.gz", prefix=PREFIX, sample=SAMPLE),
         zipped_filter_snp_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_snp.vcf.gz", prefix=PREFIX, sample=SAMPLE),
-        zipped_filter_indel_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_indel.vcf.gz", prefix=PREFIX, sample=SAMPLE)
+        zipped_filter_indel_vcf = expand("results/{prefix}/{sample}/filtered_vcf/{sample}_filter_indel.vcf.gz", prefix=PREFIX, sample=SAMPLE),
+        zipped_annotated_vcf = expand("results/{prefix}/{sample}/annotated_files/{sample}_ANN.vcf.gz",prefix=PREFIX, sample=SAMPLE),
+        zipped_annotated_filter_indel_final = expand("results/{prefix}/{sample}/annotated_files/{sample}_filter_indel_final_ANN.vcf.gz",prefix=PREFIX, sample=SAMPLE),
         
         
 # trims the raw fastq files to give trimmed fastq files
@@ -326,14 +328,16 @@ rule alignment_stats:
 # determine coverage of bam file       
 rule gatk_coverage_depth_statistics:
     input:
-        index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sorted_bam_dups_removed/{wildcards.sample}_final.bam")
+        index_sorted_dups_rmvd_bam = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/post_align/sorted_bam_dups_removed/{wildcards.sample}_final.bam"),
+        intervals = expand("results/{prefix}/ref_genome_files/{ref_name}.bed", prefix=PREFIX, ref_name=REF_NAME)
     output:
         gatk_depthCoverage_summary = f"results/{{prefix}}/{{sample}}/stats/{{sample}}_depth_of_coverage.sample_summary"
     params:
         outdir = "results/{prefix}/{sample}/stats",
         ref_genome = config["reference_genome"], 
         prefix = "{sample}",
-        intervals = config["bed_file"] 
+        #intervals = config["bed_file"] 
+        #intervals = lambda wildcards: "results/{wildcards.prefix}/ref_genome_files/{wildcards.ref_name}.bed"
     log:
         "logs/{prefix}/{sample}/stats/{sample}_coverage_depth.log"
     #conda:
@@ -341,7 +345,7 @@ rule gatk_coverage_depth_statistics:
     singularity:
         "docker://broadinstitute/gatk:4.5.0.0"
     shell:
-        "gatk DepthOfCoverage -R {params.ref_genome} -O {params.outdir}/{params.prefix}_depth_of_coverage -I {input.index_sorted_dups_rmvd_bam} --summary-coverage-threshold 1 --summary-coverage-threshold 5 --summary-coverage-threshold 9 --summary-coverage-threshold 10 --summary-coverage-threshold 15 --summary-coverage-threshold 20 --summary-coverage-threshold 25 --ignore-deletion-sites --intervals {params.intervals} &> {log}"
+        "gatk DepthOfCoverage -R {params.ref_genome} -O {params.outdir}/{params.prefix}_depth_of_coverage -I {input.index_sorted_dups_rmvd_bam} --summary-coverage-threshold 1 --summary-coverage-threshold 5 --summary-coverage-threshold 9 --summary-coverage-threshold 10 --summary-coverage-threshold 15 --summary-coverage-threshold 20 --summary-coverage-threshold 25 --ignore-deletion-sites --intervals {input.intervals} &> {log}"
 
 # bedtools
 rule bedtools_extract_coverage:
@@ -509,11 +513,15 @@ rule tabix_index_vcf:
     input:
         remove_snps_5_bp_snp_indel_file = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/filtered_vcf/{wildcards.sample}_5bp_indel_removed.vcf"),
         final_raw_vcf = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/samtools_varcall/{wildcards.sample}_aln_mpileup_raw.vcf"),
-        freebayes_varcall = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/freebayes/{wildcards.sample}_aln_freebayes_raw.vcf",)
+        freebayes_varcall = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/freebayes/{wildcards.sample}_aln_freebayes_raw.vcf"),
+        annotated_vcf = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/annotated_files/{wildcards.sample}_ANN.vcf"),
+        annotated_filter_indel_final = lambda wildcards: expand(f"results/{wildcards.prefix}/{wildcards.sample}/annotated_files/{wildcards.sample}_filter_indel_final_ANN.vcf")
     output:
         zipped_final_raw_vcf = f"results/{{prefix}}/{{sample}}/samtools_varcall/{{sample}}_aln_mpileup_raw.vcf.gz",
         zipped_remove_snps_5_bp_snp_indel_file = f"results/{{prefix}}/{{sample}}/filtered_vcf/{{sample}}_5bp_indel_removed.vcf.gz",
-        zipped_freebayes_varcall = f"results/{{prefix}}/{{sample}}/freebayes/{{sample}}_aln_freebayes_raw.vcf.gz"
+        zipped_freebayes_varcall = f"results/{{prefix}}/{{sample}}/freebayes/{{sample}}_aln_freebayes_raw.vcf.gz",
+        zipped_annotated_vcf = f"results/{{prefix}}/{{sample}}/annotated_files/{{sample}}_ANN.vcf.gz",
+        zipped_annotated_filter_indel_final = f"results/{{prefix}}/{{sample}}/annotated_files/{{sample}}_filter_indel_final_ANN.vcf.gz"
     singularity:
         "docker://staphb/htslib:1.19"
     shell:
@@ -524,4 +532,11 @@ rule tabix_index_vcf:
        bgzip -c {input.final_raw_vcf} > {output.zipped_final_raw_vcf} && tabix -p vcf -f {output.zipped_final_raw_vcf}
 
        bgzip -c {input.freebayes_varcall} > {output.zipped_freebayes_varcall} && tabix -p vcf -f {output.zipped_freebayes_varcall} 
+
+       bgzip -c {input.annotated_vcf} > {output.zipped_annotated_vcf} 
+       tabix -p vcf -f {output.zipped_annotated_vcf}
+
+       bgzip -c {input.annotated_filter_indel_final} > {output.zipped_annotated_filter_indel_final} 
+       tabix -p vcf -f {output.zipped_annotated_filter_indel_final}
+
        """
