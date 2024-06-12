@@ -44,7 +44,7 @@ if 'hash_name' not in locals():
 
 snpEff_config_file = os.path.join(yaml_dir, hash_name, "share", "snpeff-5.0-1", "snpEff.config") 
 snpeff_path = os.path.join(yaml_dir, hash_name, "share", "snpeff-5.0-1", "snpEff.jar")
-data_directory = os.path.join(snakemake.params.get("base_dir", ""), "data")
+data_directory = os.path.join(snakemake.params.get("base_dir", ""), "reference")
 
 shell(f"echo '{snakemake.params.snpEff_db}.genome : {snakemake.params.snpEff_db}' >> {snpEff_config_file}")
 shell("java -jar {snpeff_path} build -genbank -v {snakemake.params.snpEff_db} -c {snpEff_config_file} -dataDir {data_directory} &> {snakemake.log}")
