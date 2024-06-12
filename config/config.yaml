@@ -1,10 +1,16 @@
 # Configuration settings for Snakemake
+
+# Relative path where your samples are found
 samples: config/samples.tsv
 
-# Input fastq file directory path and output results directory path
+# Path to your raw sequencing reads
 input_reads: /nfs/turbo/umms-esnitkin/Github/test_data/fastq
 
-prefix: 2024-03-13_snpkit-smk
+# Directory prefix where the outputs will be saved to
+# Rename this to your preferred naming convention
+prefix: 2024-05-22_snpkit-smk
+
+# Change to genome size of your organism of interest
 genome_size: 5000000
 
 #ncores: 4
@@ -12,7 +18,9 @@ genome_size: 5000000
 #threads: 12
 
 # Reference Genome Settings
+# Change path to reference genome based on your organism of interest
 reference_genome: /nfs/esnitkin/bin_group/variant_calling_bin/reference/KPNIH1/KPNIH1.fasta
+# Change path
 bed_file: /nfs/esnitkin/bin_group/variant_calling_bin/reference/KPNIH1/KPNIH1.bed
 
 # Command line parameters for rule trimmomatic_pe
@@ -52,7 +60,7 @@ qual_snp_filter: QUAL > 100
 af_snp_filter: AF1 > 0.900
 
 #snpEff
-snpEff_path: ./.snakemake/conda/326bb1eff2e539dc0b12919a4a72cf75/share/snpeff-5.0-1/snpEff.jar
+snpEff_path: ./.snakemake/conda/c6e700b7c2bff3b3473fa26921e754ab_/share/snpeff-5.0-1/snpEff.jar
 data_dir: /gpfs/accounts/esnitkin_root/esnitkin1/dhatrib/snpkit-smk/data
-snpEff_config_file: ./.snakemake/conda/326bb1eff2e539dc0b12919a4a72cf75/share/snpeff-5.0-1/snpEff.config
+snpEff_config_file: ./.snakemake/conda/c6e700b7c2bff3b3473fa26921e754ab_/share/snpeff-5.0-1/snpEff.config
 snpeff_parameters: -d -no-downstream -no-upstream
